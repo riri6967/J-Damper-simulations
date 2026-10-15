@@ -18,8 +18,10 @@ from paraview.simple import *  # noqa: F401,F403
 
 try:
     HERE = os.path.dirname(os.path.abspath(__file__))
-except NameError:   # run from the Python shell without __file__
-    HERE = r'C:\Users\Rishi Kumar\Downloads\Pneumatics and Hydraulics\cfd\paraview'
+except NameError:   # run from the Python shell without __file__: start ParaView from the project folder
+    HERE = os.path.join(os.getcwd(), 'cfd', 'paraview')
+    if not os.path.isdir(HERE):
+        HERE = os.getcwd()
 
 R, PITCH = 0.03, 0.01
 CMAP = 'Turbo'
