@@ -679,7 +679,7 @@ canvas { display: block; width: 100%; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__sim = { setS: s => { sDist = s; lapT = 0; trace = []; cars.forEach(c => { c.y.fill(0); c.sum2 = 0; c.sumLo = 0; c.sumHi = 0; c.n = 0; c.air = 0; c.lp.fill(0); }); },
-    get data() { return { V, T }; }, redraw: () => { const inp = stepAll(); for (const f of [() => drawSide(inp), drawMap, () => drawTop(inp), drawLap, drawTrace, drawGrip]) { try { f(); } catch (e) { /* hidden panel */ } } }, stepAll, get cars() { return cars; }, get s() { return sDist; }, get lapT() { return lapT; }, reset, setTrack: (v, t) => { vk = v; tk = t; reset(); } };   // test hook
+  window.__sim = { setS: s => { sDist = s; lapT = 0; trace = []; kerbFlash = 0; cars.forEach(c => { c.y.fill(0); c.sum2 = 0; c.sumLo = 0; c.sumHi = 0; c.n = 0; c.air = 0; c.lp.fill(0); }); },
+    get data() { return { V, T }; }, redraw: () => { const inp = stepAll(); for (const f of [() => drawSide(inp), drawMap, () => drawTop(inp), drawLap, drawTrace, drawGrip]) { try { f(); } catch (e) { /* hidden panel */ } } }, stepAll, tick: dt => { kerbFlash = Math.max(0, kerbFlash - dt); }, get cars() { return cars; }, get s() { return sDist; }, get lapT() { return lapT; }, reset, setTrack: (v, t) => { vk = v; tk = t; reset(); } };   // test hook
 })();
 </script>

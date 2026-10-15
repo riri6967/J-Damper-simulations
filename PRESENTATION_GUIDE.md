@@ -136,7 +136,7 @@ F-150 2:37 Monza, 3:28 Spa.
   The cavitation model uses a 2 kPa vapour/air-release pressure and does not model dissolved-air release in detail.
 - Track simulator: tyres carry vertical load only. The lap profile is quasi-steady. Spring rates come from owner forums. CoG height, anti-roll bars and aero are estimates. The F-150's solid rear axle is modelled as independent.
 - The live simulator uses the CFD inerter at 10 Hz. The frequency-domain study uses the full frequency dependence.
-- Track numbers include the 3D port losses; the track charts and GIFs in `sim/results/` were recorded before that (CFD column differs by ≤ 1 point).
+- Track numbers, charts and GIFs include the 3D port losses (port damping ≈ 630 N s/m at 10 Hz, 2 mm stroke).
 - Next: compare with published fluid-inerter experiments (Swift et al. 2013), radiused port passages, tyre force models, and a build-and-test rig.
 
 ---

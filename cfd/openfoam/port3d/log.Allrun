@@ -1,1 +1,9 @@
-meshing failed, see mesh/log.*
+    cells:            1128100
+ ***Max skewness = 6.21933, 2 highly skew faces detected which may impair the quality of the results
+Failed 1 mesh checks.
+out_re00250: finished
+out_re00500: finished
+out_re01000: finished
+in_re00250: finished
+in_re00500: finished 10:27
+in_re01000: finished 11:24

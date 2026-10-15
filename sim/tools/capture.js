@@ -20,6 +20,7 @@ window.captureClip = async function ({ name, veh, trk, sus = 2, kept = 2, mag = 
   const bg = getComputedStyle(document.body).backgroundColor;
   for (let f = 0; f < frames; f++) {
     for (let i = 0; i < Math.round(dtSim / 2e-4); i++) __sim.stepAll();
+    __sim.tick(dtSim);                                                       // kerb-strike label lasts 0.6 s of sim time
     __sim.redraw();
     c.fillStyle = bg; c.fillRect(0, 0, W, H);
     c.drawImage(side, 0, 0, W, sideH);
