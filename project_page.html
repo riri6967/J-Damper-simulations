@@ -1,0 +1,687 @@
+<meta charset="utf-8">
+<title>Helical Fluid Inerter Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single technical-report column (max 1080px); each finding = text + its own chart, a "spec sheet" strip of key numbers up top. */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d3dae1; --grid: #e5e9ee;
+  --oil: #b26d10;      /* hydraulic oil amber: CFD results */
+  --steel: #2c6496;    /* reference theory / correlations */
+  --slate: #7b8996;    /* secondary series */
+  --good: #2f7d4f; --warn: #a1561c;
+  --oil-soft: rgba(178, 109, 16, .12); --steel-soft: rgba(44, 100, 150, .10);
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1318; --surface: #161e26; --ink: #e4e9ee; --muted: #93a1ae; --line: #2a3541; --grid: #212b35;
+  --oil: #e2a13b; --steel: #6ea6d8; --slate: #8d9aa6; --good: #5cb682; --warn: #e08a4c;
+  --oil-soft: rgba(226, 161, 59, .14); --steel-soft: rgba(110, 166, 216, .12); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1318; --surface: #161e26; --ink: #e4e9ee; --muted: #93a1ae; --line: #2a3541; --grid: #212b35;
+  --oil: #e2a13b; --steel: #6ea6d8; --slate: #8d9aa6; --good: #5cb682; --warn: #e08a4c;
+  --oil-soft: rgba(226, 161, 59, .14); --steel-soft: rgba(110, 166, 216, .12); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--f-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); text-transform: uppercase; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.3rem); text-transform: uppercase; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font: 500 .75rem/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--oil); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; border-top: 2px solid var(--ink); padding-top: 14px; }
+.sec-head .tag { font: 500 .75rem/1 var(--f-mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 28px; align-items: start; }
+.two > * { min-width: 0; }
+.prose { display: grid; gap: 12px; }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+
+/* header */
+header { display: grid; gap: 18px; }
+.lede { font-size: 1.12rem; max-width: 60ch; }
+.spec { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--surface); }
+.spec > div { padding: 14px 16px; border-right: 1px solid var(--line); display: grid; gap: 4px; align-content: start; }
+.spec > div:last-child { border-right: 0; }
+.spec .k { font: 500 .7rem/1.2 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.spec .v { font: 700 2rem/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.spec .v small { font-size: 1rem; font-weight: 600; color: var(--muted); }
+.spec .n { font-size: .82rem; color: var(--muted); line-height: 1.4; }
+.spec .hl .v { color: var(--oil); }
+@media (max-width: 820px) { .spec { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spec > div:nth-child(2) { border-right: 0; } .spec > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+@media (max-width: 420px) { .spec { grid-template-columns: 1fr; } .spec > div { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* panels and charts */
+.panel { background: var(--surface); border: 1px solid var(--line); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.panel-top { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.panel-title { font: 600 .95rem/1.3 var(--f-body); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); }
+.chart .axis-label { font-family: var(--f-body); font-size: 12px; fill: var(--ink); }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .axisline { stroke: var(--ink); stroke-width: 1; }
+.readout { font: .82rem/1.45 var(--f-mono); color: var(--muted); min-height: 2.9em; font-variant-numeric: tabular-nums; }
+.readout b { color: var(--ink); font-weight: 500; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+.sw.dash { border-top-style: dashed; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.seg { display: inline-flex; border: 1px solid var(--line); }
+.seg button { font: 500 .78rem/1 var(--f-mono); padding: 7px 10px; background: transparent; color: var(--muted); border: 0; border-right: 1px solid var(--line); cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
+
+/* tables */
+.wrap-cells th, .wrap-cells td { white-space: normal; text-align: left; vertical-align: top; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .86rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { font: 500 .72rem/1.2 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+td:first-child, th:first-child { text-align: left; }
+td.oil { color: var(--oil); font-weight: 600; }
+.chip { font: 500 .7rem/1 var(--f-mono); padding: 3px 6px; border: 1px solid currentColor; letter-spacing: .04em; }
+.chip.good { color: var(--good); } .chip.warn { color: var(--warn); }
+
+/* workflow */
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--surface); }
+.flow > div { padding: 14px 16px; border-right: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
+.flow > div:last-child { border-right: 0; }
+.flow .step { font: 700 1.6rem/1 var(--f-display); color: var(--oil); }
+.flow h3 { font-size: 1.1rem; }
+.flow p { font-size: .88rem; color: var(--muted); }
+@media (max-width: 820px) { .flow { grid-template-columns: 1fr 1fr; } .flow > div:nth-child(2) { border-right: 0; }
+  .flow > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+@media (max-width: 420px) { .flow { grid-template-columns: 1fr; } .flow > div { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* grip bars */
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr) 4.2em; gap: 12px; align-items: center; font-size: .88rem; }
+.bar .track { height: 22px; background: var(--grid); position: relative; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--slate); }
+.bar.ideal .fill { background: var(--steel); } .bar.cfd .fill { background: var(--oil); }
+.bar .val { font: 600 1rem/1 var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.bar.cfd .lab { font-weight: 600; }
+@media (max-width: 560px) { .bar { grid-template-columns: 1fr 3.8em; } .bar .track { grid-column: 1 / -1; grid-row: 2; } }
+
+/* calculator */
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; border: 1px solid var(--line); background: var(--surface); }
+.calc > div { padding: 18px; min-width: 0; }
+.calc .inputs { border-right: 1px solid var(--line); display: grid; gap: 14px; align-content: start; }
+.field { display: grid; gap: 4px; }
+.field label { display: flex; justify-content: space-between; font-size: .86rem; gap: 8px; }
+.field label output { font-family: var(--f-mono); color: var(--oil); font-weight: 500; }
+input[type="range"] { width: 100%; accent-color: var(--oil); }
+.outs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; align-content: start; }
+.outs .o { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px solid var(--grid); }
+.outs .o .k { font: 500 .7rem/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.outs .o .v { font: 700 1.45rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.outs .o .v small { font: 500 .8rem var(--f-body); color: var(--muted); }
+.outs .o.wide { grid-column: 1 / -1; }
+.calc-note { grid-column: 1 / -1; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); padding: 12px 18px; }
+@media (max-width: 820px) { .calc { grid-template-columns: 1fr; } .calc .inputs { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* gallery */
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.gallery figure { margin: 0; background: var(--surface); border: 1px solid var(--line); padding: 10px; display: grid; gap: 8px; align-content: start; }
+.gallery img { width: 100%; height: auto; display: block; background: #fff; }
+.gallery figcaption { font-size: .85rem; color: var(--muted); }
+.gallery figcaption b { color: var(--ink); font-weight: 600; }
+@media (max-width: 700px) { .gallery { grid-template-columns: 1fr; } }
+
+/* commands */
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid var(--line); background: var(--surface); }
+.cmd code { font: .84rem/1.5 var(--f-mono); padding: 10px 12px; overflow-x: auto; white-space: pre; }
+.cmd button { font: 500 .75rem/1 var(--f-mono); border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted); padding: 0 14px; cursor: pointer; }
+.cmd button:hover { color: var(--ink); }
+.limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; padding: 0; margin: 0; list-style: none; }
+.limits li { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.limits li b { display: block; font-weight: 600; }
+@media (max-width: 700px) { .limits { grid-template-columns: 1fr; } }
+.stage { overflow-x: auto; background: #fff; border: 1px solid var(--line); }
+.stage img { display: block; width: 100%; min-width: 640px; height: auto; }
+.pl-controls { display: grid; grid-template-columns: auto minmax(0, 1fr) 3.5em; gap: 12px; align-items: center; }
+.play { font: 600 .85rem/1 var(--f-body); background: var(--oil); color: var(--surface); border: 0; padding: 9px 18px; cursor: pointer; min-width: 5.5em; }
+.pl-controls output { text-align: right; color: var(--muted); }
+footer { border-top: 2px solid var(--ink); padding-top: 14px; font-size: .85rem; color: var(--muted); display: grid; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .bar .fill { transition: width .6s ease-out; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Pneumatics &amp; Hydraulics project · CFD study</span>
+  <h1>How much does the oil cost the J-damper?</h1>
+  <p class="lede">A fluid inerter makes a suspension "feel" a large mass by forcing oil through a long helical channel. The ideal theory says it improves grip. This project uses CFD of the oil flow in the channel to measure what the real device does, and how much of the grip benefit survives on a race car.</p>
+  <p><a class="play" href="#watch" style="display:inline-block;text-decoration:none">Watch the CFD animation</a></p>
+  <div class="spec" role="list">
+    <div role="listitem" class="hl"><span class="k">Grip gain, real CFD inerter</span><span class="v">5.0<small> %</small></span><span class="n">vs 8.7 % for an ideal inerter (J-damper layout)</span></div>
+    <div role="listitem"><span class="k">CFD validation</span><span class="v">≤ 3.6<small> %</small></span><span class="n">friction vs Ito (1959), Re 100–4000</span></div>
+    <div role="listitem"><span class="k">Real inertance</span><span class="v">1.02–1.26<small> ×</small></span><span class="n">the ideal formula ρ·l·A<sub>p</sub>²/A<sub>c</sub>, 1–20 Hz</span></div>
+    <div role="listitem"><span class="k">Parasitic damping</span><span class="v">1.1–3.2<small> ×</small></span><span class="n">a straight laminar pipe, rising with frequency</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="tag">Background</span><h2>The device</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>An <b>inerter</b> is a suspension element whose force is proportional to the <em>relative acceleration</em> of its ends, F = b·ẍ, with the inertance b in kilograms (Smith, 2002). McLaren raced one in Formula 1 in 2005–2007 under the codename <b>"J-damper"</b>.</p>
+      <p>In a <b>fluid inerter</b>, a 40 mm piston pushes ISO VG 32 oil through a 6 mm channel coiled 10 times (1.89 m). The oil in the channel moves 44× faster than the piston, so 46 g of oil acts like <b>91.7 kg</b> of inertance.</p>
+      <p class="muted">The ideal model ignores the fluid dynamics: viscous friction, the secondary <b>Dean vortices</b> that the coil's curvature creates, and the way an oscillating flow's velocity profile changes with frequency (Womersley number). Those effects are what this CFD study measures.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Helical-channel fluid inerter (schematic)</div>
+      <div class="chart" id="schematic" aria-label="Schematic of piston, cylinder and helical channel"></div>
+      <div class="legend"><span><i class="sw" style="border-color:var(--oil)"></i>oil channel (helix, d = 6 mm, R = 30 mm)</span><span><i class="sw" style="border-color:var(--steel)"></i>piston and cylinder (D<sub>p</sub> = 40 mm)</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="watch">
+  <div class="sec-head"><span class="tag">Flow visualisation · CFD</span><h2>Watch the inerter work</h2></div>
+  <p>One full cycle at 10 Hz, from the OpenFOAM simulation (48 snapshots). <b>Left:</b> the piston pushes oil through the coil at 44× its own speed. <b>Middle:</b> a slice through the 6 mm channel. Colour is the oil speed along the channel (red one way, blue the other), and the black streamlines are the <b>Dean vortices</b> that the coil's curvature creates. <b>Right:</b> the force on the piston traces a loop. An ideal inerter would follow the dotted line; the loop's area is the energy the oil wastes in each cycle.</p>
+  <div class="panel player">
+    <div class="panel-top">
+      <div class="seg" role="group" aria-label="Stroke">
+        <button type="button" id="pl-x2" aria-pressed="true">Stroke ±2.3 mm</button><button type="button" id="pl-x5" aria-pressed="false">Stroke ±5.6 mm</button>
+      </div>
+      <div class="seg" role="group" aria-label="Playback speed">
+        <button type="button" data-speed="0.25" aria-pressed="false">¼×</button><button type="button" data-speed="0.5" aria-pressed="true">½×</button><button type="button" data-speed="1" aria-pressed="false">1×</button>
+      </div>
+    </div>
+    <div class="stage"><img id="pl-img" src="cfd/results/demo/osc_X2/frame_00.png" alt="CFD animation frame: piston, channel cross-section with Dean vortices, and force loop" width="1008" height="351"></div>
+    <div class="pl-controls">
+      <button type="button" id="pl-play" class="play" aria-label="Play">Play</button>
+      <input type="range" id="pl-phase" min="0" max="47" step="1" value="0" aria-label="Phase in the cycle">
+      <output id="pl-out" class="mono">0°</output>
+    </div>
+    <p class="muted" style="font-size:.84rem">Watch the slice when the flow is fastest. The fast oil is thrown against the <b>outer wall</b> of the coil, and the vortices strengthen. That stirring flattens the velocity profile, which is why the measured inertance is close to ideal while the damping is 2–3× a straight pipe. At flow reversal the vortices collapse and re-form.</p>
+  </div>
+  <figure class="panel" style="margin:0">
+    <img src="cfd/results/dean_vortices.png" alt="Steady Dean vortices at three Dean numbers" loading="lazy" style="background:#fff">
+    <figcaption class="muted" style="font-size:.85rem">Steady flow at three Dean numbers. As the flow speeds up, the fastest oil (dark) moves toward the outer wall, and the two counter-rotating vortices grow and get pushed toward the top and bottom walls. This secondary flow is the source of the extra friction measured in Result 1.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Method</span><h2>Workflow</h2></div>
+  <div class="flow">
+    <div><span class="step">1</span><h3>Mesh</h3><p>Own Python generator: structured O-grid hex mesh swept along the helix, 0.16M–0.90M cells, written directly in OpenFOAM format.</p></div>
+    <div><span class="step">2</span><h3>Validate</h3><p>Steady laminar flow (simpleFoam) vs curved-pipe correlations, a 3-mesh GCI study, and a pitch check.</p></div>
+    <div><span class="step">3</span><h3>Oscillate</h3><p>Periodic 10° torus sector, oscillating pressure drive at 1–20 Hz (pimpleFoam), giving the real inertance and damping.</p></div>
+    <div><span class="step">4</span><h3>Race car</h3><p>Quarter-car on an ISO 8608 road at 180 km/h. Suspension layout optimised for grip with each inerter model.</p></div>
+  </div>
+  <p class="muted">All tools are free and open source: OpenFOAM v2406 (in WSL Ubuntu) and Python (NumPy, SciPy, Matplotlib).</p>
+</section>
+
+<section id="models">
+  <div class="sec-head"><span class="tag">What was built</span><h2>The models</h2></div>
+  <p>Every geometry and mesh was generated by the project's own Python code (<span class="mono">make_helix_mesh.py</span>), written straight into OpenFOAM's format and verified with OpenFOAM's <span class="mono">checkMesh</span> ("Mesh OK").</p>
+  <div class="gallery">
+    <figure><img src="cfd/results/models/01_helix_geometry.png" alt="3D helical channel geometry" loading="lazy"><figcaption><b>Model 1 · Full helical channel.</b> 6 mm channel, 30 mm coil radius, 10 mm pitch, 5 turns plus straight inlet and outlet legs. Used for the steady validation and the mesh study.</figcaption></figure>
+    <figure><img src="cfd/results/models/02_cross_section_meshes.png" alt="Coarse, medium and fine O-grid cross-section meshes" loading="lazy"><figcaption><b>Model 2 · Structured O-grid mesh.</b> A central block plus four blocks with cells packed toward the wall, where the Dean flow has its steepest gradients. Three refinement levels for the GCI study (0.16M / 0.38M / 0.90M cells).</figcaption></figure>
+    <figure><img src="cfd/results/models/03_mesh_detail.png" alt="Close-up of the hex mesh swept along the helix" loading="lazy"><figcaption><b>Mesh detail.</b> Hexahedral cells swept along the helix using its Frenet frame (tangent, normal, binormal). No tetrahedra and low skewness: max non-orthogonality 38°.</figcaption></figure>
+    <figure><img src="cfd/results/models/04_torus_sector.png" alt="Periodic torus sector mesh" loading="lazy"><figcaption><b>Model 3 · Periodic torus sector.</b> A 10° slice whose two end faces are linked, so the flow behaves as in an endless coil. 2,560 cells instead of 237,000, which makes the oscillating cases take minutes instead of days. Validated against Model 1 to within 0.1 %.</figcaption></figure>
+    <figure style="grid-column:1/-1"><img src="cfd/results/models/05_suspension_layouts.png" alt="Quarter-car models with four suspension layouts" loading="lazy"><figcaption><b>Model 4 · Quarter-car suspension.</b> Sprung and unsprung mass, tyre spring, ISO 8608 road. Four ways to fit the inerter (orange). Each layout's springs, dampers and inertance were optimised for grip, then re-optimised with each inerter model: ideal, correlation, Womersley, and CFD.</figcaption></figure>
+  </div>
+  <p class="muted">Also built: the inerter physics model (ideal inertance, curved-pipe friction, Womersley oscillating flow, cavitation check) and the reduced-order model F = b·ẍ + c₁·ẋ + c₂·ẋ|ẋ| fitted to the CFD, in <span class="mono">python/inerter_model.py</span>.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Result 1 · Validation</span><h2>The CFD matches the correlations</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>Curvature makes the channel lose more pressure than a straight pipe. The ratio f<sub>c</sub>/f<sub>s</sub> grows with the <b>Dean number</b> De = Re·√(r/R).</p>
+      <p>The full-helix CFD agrees with Ito (1959) to within <b>0.3–3.6 %</b> from Re = 100 to 4000, and with White (1929) to within about 3 % from Re = 250 up.</p>
+      <p>A <b>periodic torus sector</b> with no helix pitch (pink triangles) matches the full helix to within 0.1 % wherever it converged, so the pitch is negligible. That justifies running the oscillating cases on 2,560 cells instead of 237,000.</p>
+      <p class="muted">Hover or tap a point for its values.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-top"><span class="panel-title">Friction increase from curvature, f<sub>c</sub>/f<sub>s</sub></span></div>
+      <div class="chart" id="chart-friction"></div>
+      <div class="legend" id="leg-friction"></div>
+      <div class="readout" id="ro-friction" aria-live="polite">Hover a point.</div>
+    </div>
+  </div>
+  <div class="tbl">
+    <table>
+      <caption class="muted" style="caption-side:bottom;text-align:left;padding:8px 10px;font-size:.82rem">Grid Convergence Index (Celik et al. 2008), meshes 0.16M / 0.38M / 0.90M cells, refinement ratio 1.33. At Re = 4000 only the fine mesh reached a steady solution, so a two-mesh estimate (p = 2, Fs = 3) is used there.</caption>
+      <thead><tr><th>Re</th><th>De</th><th>Coarse</th><th>Medium</th><th>Fine</th><th>Extrapolated</th><th>GCI fine</th><th>Ito</th><th>Mesh</th></tr></thead>
+      <tbody id="gci-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Result 2 · Oscillating flow</span><h2>The real inerter is not ideal</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>Each case drives the oil back and forth at a fixed frequency and stroke. A Fourier analysis of force and piston velocity gives the equivalent <b>inertance b<sub>eq</sub></b> and <b>parasitic damping c<sub>eq</sub></b>.</p>
+      <p><b>Inertance.</b> A straight laminar pipe would read 1.22–1.33 × the ideal value (Womersley's exact solution, black line), because the parabolic velocity profile carries extra momentum. In the coil, the <b>Dean vortices flatten the profile</b>, bringing the inertance down to 1.02–1.26 ×. More stroke means stronger vortices and a value closer to ideal.</p>
+      <p><b>Damping.</b> 1.1–3.2 × the straight-pipe value, growing with frequency and stroke. A quasi-steady curved-pipe correlation predicts it to within about 4 %. The inertance, however, is only captured by the CFD.</p>
+      <p class="muted">All 10 cases are fully periodic (cycle-to-cycle change ≤ 0.02 %).</p>
+    </div>
+    <div class="panel">
+      <div class="panel-top">
+        <span class="panel-title" id="osc-title">Effective inertance, b<sub>eq</sub> / b<sub>ideal</sub></span>
+        <div class="seg" role="group" aria-label="Quantity">
+          <button type="button" id="q-b" aria-pressed="true">Inertance</button><button type="button" id="q-c" aria-pressed="false">Damping</button>
+        </div>
+      </div>
+      <div class="chart" id="chart-osc"></div>
+      <div class="legend" id="leg-osc"></div>
+      <div class="readout" id="ro-osc" aria-live="polite">Hover a point.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Result 3 · Race car</span><h2>What survives on track</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>Quarter-car model, GT/prototype corner, ISO 8608 class A road at 180 km/h. The metric is the RMS <b>dynamic tyre load</b>: less fluctuation means more consistent grip.</p>
+      <p>An inerter in parallel with the spring and damper gives <b>no benefit</b>. The benefit appears only in a <b>J-damper style series branch</b> (spring–damper–inerter in series, in parallel with the main spring), with every element re-optimised for each inerter model.</p>
+      <p>With the CFD-measured inerter, about <b>40–50 % of the ideal benefit is lost</b> to the oil. Larger strokes lose more.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Reduction in dynamic tyre load vs a conventional suspension</div>
+      <div class="bars" id="bars"></div>
+      <p class="muted" style="font-size:.82rem">Optimal nominal inertance (kg) shown on hover. Source: <span class="mono">python/run_cfd_vehicle_study.py</span></p>
+    </div>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <div class="panel-title">Suspension layouts (ideal vs correlation-based fluid inerter)</div>
+      <div class="tbl" style="border:0"><table><thead><tr><th>Layout</th><th>Ideal</th><th>Fluid, 6 mm</th></tr></thead><tbody id="lay-body"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Design trade-off: wider channel, fewer losses</div>
+      <div class="chart" id="chart-d"></div>
+      <div class="readout" id="ro-d">A wider channel loses less, but needs a longer coil for the same inertance (l ∝ b·A<sub>c</sub>/A<sub>p</sub>²).</div>
+    </div>
+  </div>
+</section>
+
+<section id="chamber">
+  <div class="sec-head"><span class="tag">Result 4 · The piston and cavitation</span><h2>Inside the piston chamber</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>The coil CFD drives the oil in the channel directly, because the oil is incompressible: piston area × piston speed = channel area × oil speed. The <b>piston, its two oil chambers and the sharp-edged ports</b> were simulated separately, as an axisymmetric CFD with a moving-piston boundary. The tube end is <b>coupled to the rest of the coil</b> through the inertance and damping measured by the coil CFD.</p>
+      <p><b>Port losses.</b> The entry loss is K = 0.32–0.54. The exit loss is <b>K = 1.9</b>, not the textbook 1.0: laminar oil leaves the channel with a peaked profile carrying twice the kinetic energy, and the chamber destroys all of it.</p>
+      <p><b>Oscillating piston (10 Hz).</b> The jet from the port rolls up into a ring vortex in the chamber. Chambers and ports add <b>+7.4 % damping</b> to the channel, with no real change in inertance.</p>
+      <p><b>The drilled port in 3D.</b> In the device the port is a radial hole in the bore wall. It meets an axial drilling at a sharp corner and turns sharply again into the coil. A 3D CFD of that path, with fully developed coil flow arriving at the port, gives <b>K_in ≈ 2.6 and K_out ≈ 3.8</b>: about 6.4 velocity heads in total, against 2.3 for the port alone. Each sharp elbow costs about one velocity head, so radiused passages would be worth having.</p>
+      <p><b>Effect on grip: small.</b> The vehicle model now uses these 3D losses. At a 2 mm stroke the ports add about 630 N s/m of damping at 10 Hz, rising in proportion to frequency. The quarter-car grip benefit stays at 5.0 %, because the tuning takes a slightly smaller inertance. With the J-dampers retuned, the track results move by up to ±1 percentage point.</p>
+      <p><b>Cavitation</b> (two-phase CFD, Schnerr–Sauer model, 20 Hz). Vapour forms in the ring-vortex core and at the piston corner when the pre-charge is below <b>≈ 1.75 MPa</b>. The hand calculation predicted 1.73 MPa.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Key numbers</div>
+      <div class="tbl" style="border:0;font-size:.85rem"><table>
+        <thead><tr><th>Quantity</th><th>CFD</th><th>Assumed before</th></tr></thead>
+        <tbody>
+          <tr><td>Entry loss K_in (Re 250–2000)</td><td class="oil">0.32–0.40</td><td>0.5</td></tr>
+          <tr><td>Exit loss K_out</td><td class="oil">1.89–1.95</td><td>1.0</td></tr>
+          <tr><td>Extra damping from chambers/ports, 10 Hz</td><td class="oil">+7.4 %</td><td>not modelled</td></tr>
+          <tr><td>Inertance change from chambers</td><td>−2.7 %</td><td>0</td></tr>
+          <tr><td>Drilled port + 2 elbows, K_in / K_out (3D CFD)</td><td class="oil">2.6 / 3.8</td><td>0.5 / 1.0</td></tr>
+          <tr><td>Quarter-car grip benefit with port damping</td><td class="oil">5.0 %</td><td>5.0 %</td></tr>
+          <tr><td>Cavitation-free pre-charge, 20 Hz ±2.4 mm</td><td class="oil">≈ 1.75 MPa</td><td>1.73 MPa (hand calc.)</td></tr>
+          <tr><td>Mesh check (2 meshes)</td><td>0–6 %</td><td></td></tr>
+        </tbody></table></div>
+    </div>
+  </div>
+  <div class="gallery">
+    <figure><img src="cfd/results/device_cutaway.gif" alt="Cutaway of the whole inerter with the piston moving" loading="lazy"><figcaption><b>The whole device</b> (ParaView, one CFD cycle). The piston moves; the chambers are coloured by pressure (±1.45 MPa), the coil by oil velocity (±16 m/s).</figcaption></figure>
+    <figure><img src="cfd/results/piston_chamber_flow.gif" alt="Port jet and cavitation in the piston chamber" loading="lazy"><figcaption><b>Inside the chamber.</b> Left: oil speed, the port jet and ring vortex (10 Hz). Right: vapour at 1 MPa pre-charge (20 Hz).</figcaption></figure>
+    <figure><img src="cfd/results/chamber_losses.png" alt="Port loss coefficients" loading="lazy"><figcaption><b>Port loss coefficients</b> vs Reynolds number, two meshes, against the textbook values.</figcaption></figure>
+    <figure><img src="cfd/results/port3d_losses.png" alt="3D drilled port loss coefficients vs 2D" loading="lazy"><figcaption><b>3D drilled port</b>: loss coefficients of the port + two sharp elbows vs the axisymmetric port alone.</figcaption></figure>
+    <figure><img src="cfd/results/port3d_flow.png" alt="Velocity on the mid-plane of the 3D port" loading="lazy"><figcaption><b>3D port flow</b> (Re 500, z = 0 plane): into the port (left) and the jet from the coil into the chamber (right).</figcaption></figure>
+    <figure><img src="cfd/results/chamber_oscillation.png" alt="Force loop with piston chambers" loading="lazy"><figcaption><b>Force loop at 10 Hz</b>: channel only vs channel + piston chambers and ports.</figcaption></figure>
+    <figure><img src="cfd/results/cavitation.png" alt="Cavitation vs charge pressure" loading="lazy"><figcaption><b>Cavitation</b>: vapour volume over three cycles, and minimum pressure vs pre-charge, against the hand calculation.</figcaption></figure>
+  </div>
+</section>
+
+<section id="tracks">
+  <div class="sec-head"><span class="tag">Result 5 · Real cars on real tracks</span><h2>The trade-off on track</h2></div>
+  <div class="two">
+    <div class="prose">
+      <p>A <b>full-car model</b> (body heave, pitch and roll, four wheels, anti-roll bars, bump stops, anti-dive) drives a <b>Toyota GR Supra</b> (road and GT4 race) and a <b>Ford F-150</b> around <b>Monza</b> and <b>Spa</b> (satellite-measured centrelines), the <b>Daytona</b> oval (31° banking) and a straight rough test road. Each lap runs three suspensions on the same road at once.</p>
+      <p>On the <b>straight test road</b> every car reproduces the tuned gain (about +6–7 %). On <b>circuits</b>, braking and cornering transients excite body pitch and roll. Removing the main damper then costs grip, so <b>the J-damper is a trade-off between bump grip and body control</b>.</p>
+      <p>The surprise: on the <b>soft road Supra and the F-150</b>, the real inerter's fluid damping <em>helps</em> on track (+4 to +7 %), often beating the ideal inerter. On the <b>stiff GT4</b>, the fluid losses at higher frequencies cancel most of the gain (+0 to +2 %).</p>
+      <p><a class="play" href="https://claude.ai/artifact/7UrPWUneP5iQ4BjgckWrzH" style="display:inline-block;text-decoration:none" target="_blank" rel="noopener">Open the track simulator</a></p>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Change in tyre-load fluctuation vs conventional (full laps; + = more grip)</div>
+      <div class="tbl" style="border:0;font-size:.85rem"><table>
+        <thead><tr><th>Car</th><th>Track</th><th>Ideal<br>0 / 50 %</th><th>CFD<br>0 / 50 %</th></tr></thead>
+        <tbody><tr><td>Supra road</td><td>Test road</td><td>+6.2 / +4.1</td><td class="oil">+6.9 / +4.5</td></tr>
+<tr><td></td><td>Monza</td><td>+1.4 / +2.0</td><td class="oil">+4.8 / +3.8</td></tr>
+<tr><td></td><td>Spa</td><td>-1.1 / +1.0</td><td class="oil">+4.1 / +3.8</td></tr>
+<tr><td></td><td>Daytona</td><td class="oil">+7.3 / +9.6</td><td>+4.6 / +7.1</td></tr>
+<tr><td>Supra GT4</td><td>Test road</td><td class="oil">+6.0 / +2.9</td><td>-0.5 / -0.8</td></tr>
+<tr><td></td><td>Monza</td><td class="oil">+4.9 / +4.6</td><td>+2.0 / +2.1</td></tr>
+<tr><td></td><td>Spa</td><td class="oil">+6.1 / +5.3</td><td>+1.9 / +1.9</td></tr>
+<tr><td></td><td>Daytona</td><td>-1.9 / +0.6</td><td class="oil">+2.3 / +2.6</td></tr>
+<tr><td>F-150</td><td>Test road</td><td>+6.1 / +4.3</td><td class="oil">+6.7 / +4.9</td></tr>
+<tr><td></td><td>Monza</td><td>+6.5 / +4.7</td><td class="oil">+6.8 / +5.1</td></tr>
+<tr><td></td><td>Spa</td><td>+4.0 / +3.5</td><td class="oil">+7.0 / +5.5</td></tr>
+<tr><td></td><td>Daytona</td><td class="oil">+9.2 / +6.3</td><td>+5.5 / +3.9</td></tr></tbody></table></div>
+      <p class="muted" style="font-size:.8rem">0 / 50 % = share of the normal damper kept alongside the J-damper. Highlighted: the better inerter for that car and track. All numbers: <span class="mono">sim/results/track_comparison.csv</span>.</p>
+    </div>
+  </div>
+  <div class="tbl wrap-cells">
+    <table>
+      <thead><tr><th></th><th>Conventional</th><th>Ideal J-damper</th><th>CFD J-damper (real fluid inerter)</th></tr></thead>
+      <tbody>
+        <tr><td>What it is</td><td>Spring + damper</td><td>+ spring–damper–perfect-inerter branch (F = b·ẍ)</td><td>Same branch; inerter as measured by CFD (inertance 1.02–1.26 × ideal + parasitic damping)</td></tr>
+        <tr><td>Bumps &amp; wheel hop (&gt; 3 Hz)</td><td>Baseline</td><td>Better (up to +7 %)</td><td>Better on soft cars (up to +9 %); little gain on the stiff GT4</td></tr>
+        <tr><td>Body motion (&lt; 3 Hz)</td><td>Best controlled</td><td>Worse if the main damper is removed (Supra at Spa −7 %)</td><td>Fluid damping keeps body control (Supra +1 to +3 %)</td></tr>
+        <tr><td>Best on</td><td>Body control, simplicity</td><td>Stiff race car (GT4) on circuits</td><td>Soft road car (Supra) and heavy pickup (F-150)</td></tr>
+        <tr><td>Kerb strikes</td><td colspan="3">Same for all three: the inerter cannot stop a wheel lifting over a kerb</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="gallery">
+    <figure><img src="sim/results/gt4_spa_eau_rouge.gif" alt="GR Supra GT4 through Eau Rouge at Spa" loading="lazy"><figcaption><b>GT4 through Eau Rouge.</b> +1.0 g compression at 227 km/h: all four tyres carry 160–230 % of their static load.</figcaption></figure>
+    <figure><img src="sim/results/f150_monza_braking.gif" alt="Ford F-150 braking at Monza" loading="lazy"><figcaption><b>F-150 braking at 0.94 g.</b> Weight shifts forward, the nose dives and the rear unloads.</figcaption></figure>
+    <figure><img src="sim/results/supra_testroad_cfd.gif" alt="GR Supra on the rough test road" loading="lazy"><figcaption><b>Supra on the rough test road.</b> CFD J-damper about 7 % steadier. The bottom strip shows its tyre load minus the conventional car's.</figcaption></figure>
+    <figure><img src="sim/results/supra_monza_kerb.gif" alt="GR Supra over a Monza kerb" loading="lazy"><figcaption><b>Supra over a Monza chicane kerb</b> (slow motion). Kerb strikes look the same for all three suspensions.</figcaption></figure>
+    <figure><img src="sim/results/gt4_daytona_banking.gif" alt="GT4 on Daytona banking" loading="lazy"><figcaption><b>GT4 entering Daytona's 31° banking</b> flat out: the banking adds about +0.7 g of vertical load.</figcaption></figure>
+    <figure><img src="sim/results/chart_gain_by_track.png" alt="Grip change by track" loading="lazy"><figcaption><b>Grip change by track</b> for each car, J-damper replacing (0 %) or sharing (50 %) the main damper.</figcaption></figure>
+    <figure><img src="sim/results/chart_bumps_vs_body.png" alt="Bumps vs body split" loading="lazy"><figcaption><b>Where the change comes from.</b> Bumps (&gt; 3 Hz) vs body motion (&lt; 3 Hz).</figcaption></figure>
+    <figure><img src="sim/results/chart_tradeoff.png" alt="Trade-off vs damper kept" loading="lazy"><figcaption><b>The trade-off.</b> Grip change vs how much of the normal damper is kept, test road vs circuits.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Interactive</span><h2>Inerter design calculator</h2></div>
+  <p class="muted">Change the geometry and operating point. Formulas from <span class="mono">docs/theory.md</span>: ideal inertance, laminar damping, Dean and Womersley numbers, Ito curvature factor, cavitation pressure.</p>
+  <div class="calc">
+    <div class="inputs">
+      <div class="field"><label for="in-Dp">Piston bore D<sub>p</sub> <output id="o-Dp"></output></label><input type="range" id="in-Dp" min="20" max="80" step="1" value="40"></div>
+      <div class="field"><label for="in-d">Channel diameter d <output id="o-d"></output></label><input type="range" id="in-d" min="3" max="12" step="0.5" value="6"></div>
+      <div class="field"><label for="in-R">Coil radius R <output id="o-R"></output></label><input type="range" id="in-R" min="15" max="60" step="1" value="30"></div>
+      <div class="field"><label for="in-n">Number of turns <output id="o-n"></output></label><input type="range" id="in-n" min="2" max="40" step="1" value="10"></div>
+      <div class="field"><label for="in-X">Piston stroke amplitude X <output id="o-X"></output></label><input type="range" id="in-X" min="0.5" max="10" step="0.5" value="2"></div>
+      <div class="field"><label for="in-f">Frequency f <output id="o-f"></output></label><input type="range" id="in-f" min="0.5" max="25" step="0.5" value="10"></div>
+    </div>
+    <div class="outs" id="outs"></div>
+    <div class="calc-note">Oil: ISO VG 32 at 40 °C (ρ = 870 kg/m³, μ = 0.028 Pa·s). Coil pitch = d + 4 mm. The CFD shows the real inertance is about 1.02–1.26 × the ideal value and the damping 1.1–3.2 × the straight-pipe value, depending on Dean number.</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">All figures</span><h2>Plot gallery</h2></div>
+  <div class="gallery">
+    <figure><img src="cfd/results/transient_force_loops.png" alt="Force-displacement loops from CFD compared with an ideal inerter" loading="lazy"><figcaption><b>Force loops.</b> CFD force vs piston displacement at 2 and 5 mm stroke. Dotted lines are the ideal inerter. The loop area is the energy lost to the oil.</figcaption></figure>
+    <figure><img src="cfd/results/gci_s01.png" alt="Mesh independence study" loading="lazy"><figcaption><b>Mesh independence.</b> Three meshes and the Richardson-extrapolated value with GCI uncertainty bars.</figcaption></figure>
+    <figure><img src="cfd/results/s01_development.png" alt="Flow development along the helix turns" loading="lazy"><figcaption><b>Flow development.</b> The friction is identical from turn 2 onward, so the flow is fully developed after one turn.</figcaption></figure>
+    <figure><img src="cfd/results/torus_steady_medium.png" alt="Torus sector versus full helix" loading="lazy"><figcaption><b>Pitch check.</b> Periodic torus sector vs full helix on the same cross-section mesh.</figcaption></figure>
+    <figure><img src="python/results/time_domain.png" alt="Time-domain quarter car simulation" loading="lazy"><figcaption><b>Time domain.</b> Tyre force and suspension travel on the road profile: conventional vs J-damper with ideal and fluid inerters.</figcaption></figure>
+    <figure><img src="python/results/tyre_force_frf.png" alt="Tyre force frequency response" loading="lazy"><figcaption><b>Frequency response.</b> The J-damper branch lowers the tyre-force peak around wheel hop.</figcaption></figure>
+    <figure><img src="python/results/parasitic_loss_force.png" alt="Parasitic loss force vs velocity" loading="lazy"><figcaption><b>Parasitic loss.</b> Curvature and entry/exit losses make the damping nonlinear.</figcaption></figure>
+    <figure><img src="python/results/cfd_vehicle_study.png" alt="Grip benefit by inerter model and admittance" loading="lazy"><figcaption><b>Inerter models.</b> Grip benefit and inerter admittance per kg for each model.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Scope</span><h2>Limitations and next steps</h2></div>
+  <ul class="limits">
+    <li><b>Laminar, isothermal oil</b>The oil viscosity changes with temperature. Every case stays below the curved-pipe transition Reynolds number (about 9,300).</li>
+    <li><b>Chamber CFD is axisymmetric</b>The piston chamber and port are 2D, with a straight tube standing for the start of the coil.</li>
+    <li><b>Simple cavitation model</b>Schnerr–Sauer with a 2 kPa vapour/air-release pressure; dissolved-air release is not modelled in detail.</li>
+    <li><b>Track simulator scope</b>Vertical tyre model only; quasi-steady lap profile; spring rates from owner forums; CoG, anti-roll bars and aero estimated.</li>
+    <li><b>High Dean number (De &gt; 1000)</b>Needs fine wall resolution: only the 0.9M-cell mesh converged there.</li>
+    <li><b>Experimental comparison</b>The next validation step is the published fluid-inerter test data (Swift et al. 2013; Liu et al. 2018).</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><span class="tag">Reproduce</span><h2>Run it yourself</h2></div>
+  <p>From PowerShell in the project folder. All plots come from the existing results in about 2 minutes. The full CFD re-run takes about 1.5–2 hours on 8 cores.</p>
+  <div class="cmd"><code id="c1">powershell -ExecutionPolicy Bypass -File run_all.ps1 -SkipCFD</code><button type="button" data-copy="c1">Copy</button></div>
+  <div class="cmd"><code id="c2">powershell -ExecutionPolicy Bypass -File run_all.ps1</code><button type="button" data-copy="c2">Copy</button></div>
+  <p>Live flow demo in about 6 minutes: run the visualisation cases in Ubuntu, then render the animation in PowerShell.</p>
+  <div class="cmd"><code id="c3">bash "/mnt/c/Users/Rishi Kumar/Downloads/Pneumatics and Hydraulics/cfd/openfoam/run_in_wsl.sh" torus_demo</code><button type="button" data-copy="c3">Copy</button></div>
+  <div class="cmd"><code id="c4">python cfd\scripts\render_demo.py</code><button type="button" data-copy="c4">Copy</button></div>
+  <p class="muted">Step-by-step instructions are in <span class="mono">HOW_TO_RUN.md</span>, and the equations in <span class="mono">docs/theory.md</span>.</p>
+</section>
+
+<footer>
+  <span>Key references: Smith (2002) IEEE TAC 47(10); Smith &amp; Wang (2004) Veh. Syst. Dyn. 42(4); Swift et al. (2013) Int. J. Control 86(11); Ito (1959) J. Basic Eng. 81; White (1929) Proc. R. Soc. A 123; Womersley (1955) J. Physiol. 127; Celik et al. (2008) J. Fluids Eng. 130(7).</span>
+  <span>OpenFOAM v2406 · Python 3 · ISO 8608 road · all numbers on this page come from the project's result files.</span>
+</footer>
+</div>
+
+<script id="data" type="application/json">{"s01":[{"Re":100.0,"De":31.6228,"fD_cfd":0.741712,"fc_over_fs_cfd":1.15893,"fc_over_fs_ito":1.12009,"fc_over_fs_white":1.11773,"iterations":152.0,"flux_err_pct":-4.28525e-07},{"Re":250.0,"De":79.0569,"fD_cfd":0.367537,"fc_over_fs_cfd":1.43569,"fc_over_fs_ito":1.38981,"fc_over_fs_white":1.42083,"iterations":177.0,"flux_err_pct":-1.79898e-07},{"Re":500.0,"De":158.114,"fD_cfd":0.226867,"fc_over_fs_cfd":1.7724,"fc_over_fs_ito":1.72292,"fc_over_fs_white":1.78674,"iterations":238.0,"flux_err_pct":-1.41546e-07},{"Re":1000.0,"De":316.228,"fD_cfd":0.146982,"fc_over_fs_cfd":2.2966,"fc_over_fs_ito":2.21607,"fc_over_fs_white":2.3042,"iterations":436.0,"flux_err_pct":-5.32948e-09},{"Re":2000.0,"De":632.456,"fD_cfd":0.0963107,"fc_over_fs_cfd":3.00971,"fc_over_fs_ito":2.94187,"fc_over_fs_white":3.02225,"iterations":872.0,"flux_err_pct":2.44264e-08},{"Re":4000.0,"De":1264.91,"fD_cfd":0.0636222,"fc_over_fs_cfd":3.97638,"fc_over_fs_ito":4.01372,"fc_over_fs_white":4.01052,"iterations":4000.0,"flux_err_pct":-0.00989901}],"gci":[{"Re":100.0,"De":31.6228,"coarse":1.16085,"medium":1.15893,"fine":1.15761,"phi_ext":1.15467,"p":1.29376,"r21":1.33228,"r32":1.33389,"ea21":0.00113882,"eext21":0.00254032,"gci_fine":0.00316736,"iter_std_max":0.0,"ito":1.12009},{"Re":1000.0,"De":316.228,"coarse":2.295,"medium":2.2966,"fine":2.29725,"phi_ext":2.29809,"p":3.11059,"r21":1.33228,"r32":1.33389,"ea21":0.00028352,"eext21":0.000365707,"gci_fine":0.00109752,"iter_std_max":0.0,"ito":2.21607},{"Re":4000.0,"De":1264.91,"coarse":3.7258,"medium":3.97638,"fine":4.04713,"phi_ext":4.13841,"p":4.38272,"r21":1.33228,"r32":1.33389,"ea21":0.0174798,"eext21":0.0220576,"gci_fine":0.0676654,"iter_std_max":0.00952669,"ito":4.01372}],"torus":[{"Re":97.1392,"De":30.7181,"fc_over_fs_torus":1.15308,"fc_over_fs_helix":1.15893,"fc_over_fs_ito":1.11409,"converged":1.0},{"Re":243.362,"De":76.9578,"fc_over_fs_torus":1.42772,"fc_over_fs_helix":1.42756,"fc_over_fs_ito":1.37941,"converged":1.0},{"Re":489.108,"De":154.67,"fc_over_fs_torus":1.76128,"fc_over_fs_helix":1.7617,"fc_over_fs_ito":1.71017,"converged":1.0},{"Re":973.483,"De":307.842,"fc_over_fs_torus":2.27644,"fc_over_fs_helix":2.27627,"fc_over_fs_ito":2.19319,"converged":1.0},{"Re":2018.35,"De":638.257,"fc_over_fs_torus":2.91513,"fc_over_fs_helix":3.02244,"fc_over_fs_ito":2.95343,"converged":0.0},{"Re":4184.66,"De":1323.31,"fc_over_fs_torus":3.8366,"fc_over_fs_helix":3.97638,"fc_over_fs_ito":4.09928,"converged":0.0}],"osc":[{"case":"T01","f":1.0,"X_target_mm":5.0,"X_mm":4.72998,"alpha":1.32554,"Re_amp":246.246,"De_amp":77.8698,"b_eq":109.981,"b_ratio":1.19911,"b_womersley_ratio":1.33262,"c_eq":3588.07,"c_ratio":1.36747,"c_womersley_ratio":1.00267,"c_qs_ratio":1.32081,"harmonic3":0.0428053,"cycle_change_b":0.000190493,"cycle_change_c":1.61912e-05},{"case":"T02","f":2.0,"X_target_mm":5.0,"X_mm":4.81671,"alpha":1.87459,"Re_amp":501.523,"De_amp":158.595,"b_eq":104.589,"b_ratio":1.14033,"b_womersley_ratio":1.33052,"c_eq":4384.82,"c_ratio":1.67112,"c_womersley_ratio":1.01056,"c_qs_ratio":1.62772,"harmonic3":0.0477868,"cycle_change_b":3.19896e-06,"cycle_change_c":1.44573e-07},{"case":"T03","f":5.0,"X_target_mm":5.0,"X_mm":5.08932,"alpha":2.96399,"Re_amp":1324.77,"De_amp":418.928,"b_eq":97.5383,"b_ratio":1.06345,"b_womersley_ratio":1.31716,"c_eq":6245.09,"c_ratio":2.38009,"c_womersley_ratio":1.06133,"c_qs_ratio":2.30965,"harmonic3":0.0462276,"cycle_change_b":1.64381e-08,"cycle_change_c":1.92365e-08},{"case":"T04","f":10.0,"X_target_mm":5.0,"X_mm":5.60453,"alpha":4.19172,"Re_amp":2917.76,"De_amp":922.675,"b_eq":93.8298,"b_ratio":1.02302,"b_womersley_ratio":1.28277,"c_eq":8492.53,"c_ratio":3.23663,"c_womersley_ratio":1.19783,"c_qs_ratio":3.21275,"harmonic3":0.0385305,"cycle_change_b":7.54983e-09,"cycle_change_c":8.07034e-09},{"case":"T05","f":20.0,"X_target_mm":2.0,"X_mm":2.43322,"alpha":5.92798,"Re_amp":2533.5,"De_amp":801.162,"b_eq":94.7135,"b_ratio":1.03265,"b_womersley_ratio":1.22258,"c_eq":7771.91,"c_ratio":2.96199,"c_womersley_ratio":1.47731,"c_qs_ratio":3.02052,"harmonic3":0.0174015,"cycle_change_b":4.80916e-09,"cycle_change_c":1.6435e-07},{"case":"T06","f":1.0,"X_target_mm":2.0,"X_mm":1.90981,"alpha":1.32554,"Re_amp":99.426,"De_amp":31.4413,"b_eq":115.592,"b_ratio":1.26029,"b_womersley_ratio":1.33262,"c_eq":2951.06,"c_ratio":1.12469,"c_womersley_ratio":1.00267,"c_qs_ratio":1.08776,"harmonic3":0.0237735,"cycle_change_b":0.000222547,"cycle_change_c":5.41653e-05},{"case":"T07","f":2.0,"X_target_mm":2.0,"X_mm":1.93035,"alpha":1.87459,"Re_amp":200.991,"De_amp":63.5589,"b_eq":109.774,"b_ratio":1.19686,"b_womersley_ratio":1.33052,"c_eq":3427.44,"c_ratio":1.30625,"c_womersley_ratio":1.01056,"c_qs_ratio":1.25501,"harmonic3":0.0316559,"cycle_change_b":9.66358e-06,"cycle_change_c":1.01108e-07},{"case":"T08","f":5.0,"X_target_mm":2.0,"X_mm":2.09054,"alpha":2.96399,"Re_amp":544.174,"De_amp":172.083,"b_eq":101.931,"b_ratio":1.11134,"b_womersley_ratio":1.31716,"c_eq":4492.94,"c_ratio":1.71233,"c_womersley_ratio":1.06133,"c_qs_ratio":1.67178,"harmonic3":0.0284429,"cycle_change_b":1.60449e-08,"cycle_change_c":7.54081e-08},{"case":"T09","f":10.0,"X_target_mm":2.0,"X_mm":2.27346,"alpha":4.19172,"Re_amp":1183.58,"De_amp":374.28,"b_eq":97.1196,"b_ratio":1.05889,"b_womersley_ratio":1.28277,"c_eq":5904.44,"c_ratio":2.25027,"c_womersley_ratio":1.19783,"c_qs_ratio":2.21028,"harmonic3":0.023729,"cycle_change_b":3.85733e-08,"cycle_change_c":5.60294e-08},{"case":"T10","f":15.0,"X_target_mm":2.0,"X_mm":2.37799,"alpha":5.13378,"Re_amp":1857.0,"De_amp":587.234,"b_eq":95.4409,"b_ratio":1.04058,"b_womersley_ratio":1.2492,"c_eq":6947.79,"c_ratio":2.6479,"c_womersley_ratio":1.34426,"c_qs_ratio":2.64775,"harmonic3":0.0206228,"cycle_change_b":6.6518e-08,"cycle_change_c":2.95955e-08}],"rom":[{"f":1.0,"cases":"T01+T06","b":106.923,"c1":2571.91,"c2":40581.8,"nrmse":0.003548},{"f":2.0,"cases":"T02+T07","b":99.3243,"c1":2836.67,"c2":30274.8,"nrmse":0.004737},{"f":5.0,"cases":"T03+T08","b":92.7376,"c1":3445.26,"c2":20547.9,"nrmse":0.006935},{"f":10.0,"cases":"T04+T09","b":90.7737,"c1":4490.46,"c2":13266.5,"nrmse":0.008249},{"f":15.0,"cases":"T10","b":92.4038,"c1":7005.16,"c2":"nan","nrmse":0.0178},{"f":20.0,"cases":"T05","b":92.0734,"c1":7821.13,"c2":"nan","nrmse":0.01614}],"corr":{"De":[10.0,10.694,11.435,12.229,13.077,13.984,14.954,15.991,17.101,18.287,19.556,20.912,22.363,23.914,25.573,27.347,29.244,31.272,33.441,35.761,38.242,40.895,43.731,46.765,50.009,53.478,57.187,61.154,65.397,69.933,74.784,79.972,85.519,91.451,97.795,104.579,111.833,119.591,127.886,136.758,146.244,156.389,167.237,178.838,191.243,204.509,218.696,233.866,250.089,267.437,285.988,305.826,327.041,349.727,373.987,399.929,427.671,457.338,489.062,522.987,559.265,598.06,639.546,683.909,731.351,782.082,836.333,894.348,956.386,1022.729,1093.673,1169.538,1250.666,1337.421,1430.195,1529.404,1635.495,1748.945,1870.265,2000.0],"ito":[1.0,1.0,1.0,1.0,1.0,1.0027,1.0084,1.0149,1.022,1.0298,1.0383,1.0475,1.0575,1.0681,1.0794,1.0915,1.1042,1.1178,1.1321,1.1471,1.1629,1.1796,1.197,1.2153,1.2345,1.2545,1.2754,1.2972,1.32,1.3438,1.3685,1.3943,1.4212,1.4491,1.4782,1.5084,1.5398,1.5725,1.6065,1.6418,1.6785,1.7165,1.7561,1.7972,1.8398,1.8841,1.9301,1.9778,2.0274,2.0788,2.1322,2.1877,2.2452,2.3049,2.3669,2.4313,2.4981,2.5674,2.6394,2.7142,2.7918,2.8723,2.956,3.0429,3.1331,3.2268,3.3241,3.4252,3.5302,3.6392,3.7525,3.8703,3.9926,4.1197,4.2518,4.3891,4.5318,4.6802,4.8344,4.9948],"white":[1.0,1.0,1.0,1.0002,1.0014,1.0037,1.0072,1.0117,1.0174,1.0242,1.032,1.0409,1.0508,1.0617,1.0736,1.0865,1.1003,1.1152,1.131,1.1477,1.1654,1.1841,1.2038,1.2244,1.246,1.2686,1.2922,1.3168,1.3425,1.3692,1.397,1.4259,1.4558,1.487,1.5192,1.5527,1.5874,1.6233,1.6604,1.6989,1.7387,1.7799,1.8224,1.8664,1.9119,1.9589,2.0075,2.0576,2.1094,2.1629,2.2181,2.2751,2.3339,2.3947,2.4573,2.522,2.5887,2.6576,2.7286,2.8019,2.8774,2.9554,3.0358,3.1187,3.2042,3.2924,3.3834,3.4772,3.5739,3.6736,3.7764,3.8824,3.9917,4.1044,4.2206,4.3404,4.4639,4.5912,4.7224,4.8577]},"wom":{"f":[0.5,0.5359,0.5744,0.6157,0.66,0.7074,0.7582,0.8127,0.8711,0.9337,1.0008,1.0727,1.1498,1.2324,1.321,1.4159,1.5177,1.6267,1.7436,1.8689,2.0032,2.1472,2.3015,2.4669,2.6441,2.8342,3.0378,3.2561,3.4901,3.7409,4.0097,4.2979,4.6067,4.9378,5.2926,5.6729,6.0806,6.5175,6.9859,7.4879,8.0259,8.6027,9.2209,9.8835,10.5937,11.355,12.171,13.0456,13.983,14.9879,16.0649,17.2193,18.4567,19.783,21.2046,22.7284,24.3617,26.1123,27.9887,30.0],"b":[1.3332,1.3331,1.3331,1.3331,1.333,1.333,1.3329,1.3329,1.3328,1.3327,1.3326,1.3325,1.3324,1.3323,1.3321,1.3319,1.3317,1.3315,1.3312,1.3309,1.3305,1.3301,1.3296,1.3291,1.3285,1.3278,1.327,1.3261,1.3251,1.3239,1.3226,1.3211,1.3194,1.3175,1.3154,1.3131,1.3104,1.3076,1.3044,1.3009,1.297,1.2929,1.2884,1.2836,1.2785,1.2731,1.2675,1.2616,1.2555,1.2493,1.2429,1.2365,1.23,1.2236,1.2172,1.2108,1.2046,1.1984,1.1924,1.1864],"c":[1.0007,1.0008,1.0009,1.001,1.0012,1.0013,1.0015,1.0018,1.002,1.0023,1.0027,1.0031,1.0035,1.004,1.0046,1.0053,1.0061,1.007,1.0081,1.0092,1.0106,1.0121,1.0139,1.0159,1.0183,1.0209,1.0239,1.0273,1.0312,1.0356,1.0407,1.0463,1.0527,1.0599,1.068,1.0771,1.0872,1.0985,1.111,1.1248,1.14,1.1566,1.1747,1.1944,1.2155,1.2382,1.2624,1.2881,1.3153,1.3439,1.3739,1.4052,1.4379,1.4719,1.5071,1.5437,1.5816,1.6209,1.6616,1.7039]},"vehicle":[{"model":"Ideal inerter","gain":8.69,"b":297.9},{"model":"Correlation (quasi-steady)","gain":4.44,"b":127.0},{"model":"Womersley (straight pipe)","gain":5.36,"b":152.3},{"model":"CFD curved channel, X = 2 mm","gain":5.03,"b":107.7},{"model":"CFD curved channel, X = 5 mm","gain":4.51,"b":80.2}],"layouts":[{"name":"L1: k || c","ideal":0.0,"fluid":0.0},{"name":"L2: k || c || b","ideal":0.0,"fluid":0.0},{"name":"L3: k || (c ser b)","ideal":3.12,"fluid":0.0},{"name":"L4: k || c1 || (k2 ser c2 ser b)","ideal":8.69,"fluid":4.44}],"dchart":{"d":[3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0],"gain":[3.7,3.88,4.11,4.44,4.81,5.2,5.58,5.93,6.25,6.54]},"base":{"b":91.72,"c_lin":2624.0,"l":1.888}}</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const fmt = (v, d) => Number(v).toFixed(d);
+
+  // ---------- generic chart: log or linear x, linear y ----------
+  function chart(host, o) {
+    host.innerHTML = '';
+    const W = 640, H = 380, m = { l: 58, r: 18, t: 14, b: 50 };
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria }, host);
+    const tx = o.xLog ? v => Math.log10(v) : v => v;
+    const [x0, x1] = o.x.map(tx), [y0, y1] = o.y;
+    const X = v => m.l + (tx(v) - x0) / (x1 - x0) * (W - m.l - m.r);
+    const Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+    o.yTicks.forEach(t => { el('line', { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: 'gridline' }, svg);
+      el('text', { x: m.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }, svg).textContent = o.yFmt ? o.yFmt(t) : t; });
+    o.xTicks.forEach(t => { el('line', { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, class: 'gridline' }, svg);
+      el('text', { x: X(t), y: H - m.b + 18, 'text-anchor': 'middle' }, svg).textContent = t; });
+    el('line', { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, class: 'axisline' }, svg);
+    el('line', { x1: m.l, x2: m.l, y1: m.t, y2: H - m.b, class: 'axisline' }, svg);
+    el('text', { x: (m.l + W - m.r) / 2, y: H - 8, 'text-anchor': 'middle', class: 'axis-label' }, svg).textContent = o.xLabel;
+    el('text', { x: 14, y: (m.t + H - m.b) / 2, 'text-anchor': 'middle', class: 'axis-label', transform: `rotate(-90 14 ${(m.t + H - m.b) / 2})` }, svg).textContent = o.yLabel;
+    o.series.forEach(s => {
+      const color = css(s.color);
+      if (s.type === 'line') {
+        const d = s.xs.map((x, i) => `${i ? 'L' : 'M'}${X(x).toFixed(1)},${Y(s.ys[i]).toFixed(1)}`).join('');
+        el('path', { d, fill: 'none', stroke: color, 'stroke-width': s.w || 2, 'stroke-dasharray': s.dash || '' }, svg);
+      } else {
+        if (s.join) el('path', { d: s.xs.map((x, i) => `${i ? 'L' : 'M'}${X(x)},${Y(s.ys[i])}`).join(''), fill: 'none', stroke: color, 'stroke-width': 1.5, opacity: .7 }, svg);
+        s.xs.forEach((x, i) => {
+          const g = el('g', { tabindex: 0, style: 'cursor:pointer' }, svg);
+          let shape;
+          if (s.shape === 'tri') shape = el('path', { d: `M${X(x)},${Y(s.ys[i]) - 7}l6.5,11.5h-13z` }, g);
+          else if (s.shape === 'sq') shape = el('rect', { x: X(x) - 5.5, y: Y(s.ys[i]) - 5.5, width: 11, height: 11 }, g);
+          else shape = el('circle', { cx: X(x), cy: Y(s.ys[i]), r: s.r || 6 }, g);
+          shape.setAttribute('fill', s.hollow ? css('--surface') : color);
+          shape.setAttribute('stroke', color); shape.setAttribute('stroke-width', 2);
+          const show = () => { o.readout.innerHTML = s.tip(i); };
+          g.addEventListener('mouseenter', show); g.addEventListener('focus', show); g.addEventListener('click', show);
+        });
+      }
+    });
+  }
+  const legend = (host, items) => { host.innerHTML = items.map(([kind, color, label, dash]) =>
+    kind === 'line' ? `<span><i class="sw${dash ? ' dash' : ''}" style="border-color:var(${color})"></i>${label}</span>`
+                    : `<span><i class="dot" style="background:var(${color})"></i>${label}</span>`).join(''); };
+
+  // ---------- schematic: cylinder, piston, coil ----------
+  function schematic() {
+    const host = document.getElementById('schematic'); host.innerHTML = '';
+    const svg = el('svg', { viewBox: '0 0 640 260', role: 'img', 'aria-label': 'Piston in a cylinder, oil channel coiled around it' }, host);
+    const steel = css('--steel'), oil = css('--oil'), ink = css('--ink'), muted = css('--muted'), surf = css('--surface');
+    el('rect', { x: 150, y: 70, width: 340, height: 120, fill: surf, stroke: steel, 'stroke-width': 2.5 }, svg);
+    el('rect', { x: 300, y: 76, width: 26, height: 108, fill: steel }, svg);                 // piston
+    el('rect', { x: 26, y: 123, width: 274, height: 14, fill: steel, opacity: .85 }, svg);   // rod
+    el('rect', { x: 156, y: 76, width: 144, height: 108, fill: oil, opacity: .16 }, svg);
+    el('rect', { x: 326, y: 76, width: 158, height: 108, fill: oil, opacity: .16 }, svg);
+    // coil around the cylinder: back half faint, front half strong
+    let back = '', front = '';
+    const turns = 10, xa = 175, xb = 465;
+    for (let k = 0; k <= turns * 60; k++) {
+      const th = k / 60 * 2 * Math.PI, x = xa + (xb - xa) * k / (turns * 60), y = 130 - 72 * Math.cos(th), z = Math.sin(th);
+      const seg = `${x.toFixed(1)},${y.toFixed(1)} `;
+      if (z >= 0) { front += (front.endsWith('|') || !front ? 'M' : 'L') + seg; back += '|'; }
+      else { back += (back.endsWith('|') || !back ? 'M' : 'L') + seg; front += '|'; }
+    }
+    const clean = s => s.replace(/\|+/g, ' ').trim();
+    el('path', { d: clean(back), fill: 'none', stroke: oil, 'stroke-width': 4, opacity: .3 }, svg);
+    el('path', { d: clean(front), fill: 'none', stroke: oil, 'stroke-width': 5, 'stroke-linecap': 'round' }, svg);
+    el('line', { x1: 160, y1: 186, x2: 175, y2: 202, stroke: oil, 'stroke-width': 4 }, svg);
+    el('line', { x1: 480, y1: 186, x2: 465, y2: 202, stroke: oil, 'stroke-width': 4 }, svg);
+    const t = (x, y, s, a, c) => { const e = el('text', { x, y, 'text-anchor': a || 'middle', fill: c || muted, style: 'font-family:var(--f-mono);font-size:12px' }, svg); e.textContent = s; };
+    t(80, 112, 'ẋ  (piston)', 'middle', ink);
+    el('path', { d: 'M40,100 l50,0 m-8,-5 l8,5 l-8,5', fill: 'none', stroke: ink, 'stroke-width': 1.5 }, svg);
+    t(320, 236, 'oil forced through the helix: v = (A_p/A_c)·ẋ ≈ 44·ẋ', 'middle', ink);
+    t(320, 32, 'b = ρ·l·A_p²/A_c = 91.7 kg  (46 g of oil)', 'middle', oil);
+  }
+
+  // ---------- result 1: friction ----------
+  function friction() {
+    const ro = document.getElementById('ro-friction');
+    chart(document.getElementById('chart-friction'), {
+      aria: 'Curved-pipe friction ratio vs Dean number', xLog: true, x: [10, 2000], y: [0.8, 5], readout: ro,
+      xTicks: [10, 30, 100, 300, 1000], yTicks: [1, 2, 3, 4, 5], xLabel: 'Dean number De = Re·√(r/R)', yLabel: 'f_c / f_s',
+      series: [
+        { type: 'line', xs: D.corr.De, ys: D.corr.ito, color: '--steel' },
+        { type: 'line', xs: D.corr.De, ys: D.corr.white, color: '--slate', dash: '5 4' },
+        { type: 'pts', shape: 'tri', xs: D.torus.filter(r => r.converged).map(r => r.De), ys: D.torus.filter(r => r.converged).map(r => r.fc_over_fs_torus), color: '--warn', hollow: true,
+          tip: i => { const r = D.torus.filter(r => r.converged)[i]; return `Torus sector (no pitch) · Re <b>${fmt(r.Re, 0)}</b>, De <b>${fmt(r.De, 0)}</b><br>f_c/f_s <b>${fmt(r.fc_over_fs_torus, 3)}</b> vs full helix ${fmt(r.fc_over_fs_helix, 3)} (${fmt(100 * (r.fc_over_fs_torus / r.fc_over_fs_helix - 1), 2)} %)`; } },
+        { type: 'pts', xs: D.s01.map(r => r.De), ys: D.s01.map(r => r.fc_over_fs_cfd), color: '--oil', r: 6,
+          tip: i => { const r = D.s01[i]; return `Full helix CFD · Re <b>${r.Re}</b>, De <b>${fmt(r.De, 0)}</b><br>f_c/f_s <b>${fmt(r.fc_over_fs_cfd, 3)}</b> · Ito ${fmt(r.fc_over_fs_ito, 3)} (${fmt(100 * (r.fc_over_fs_cfd / r.fc_over_fs_ito - 1), 1)} %) · White ${fmt(r.fc_over_fs_white, 3)}`; } },
+      ] });
+    legend(document.getElementById('leg-friction'), [['dot', '--oil', 'CFD full helix (0.38M cells)'], ['dot', '--warn', 'CFD torus sector'], ['line', '--steel', 'Ito (1959)'], ['line', '--slate', 'White (1929)', true]]);
+    document.getElementById('gci-body').innerHTML = D.gci.map(r => {
+      const ok = r.gci_fine < 0.01;
+      return `<tr><td>${r.Re}</td><td>${fmt(r.De, 0)}</td><td>${fmt(r.coarse, 4)}</td><td>${fmt(r.medium, 4)}</td><td>${fmt(r.fine, 4)}</td>
+        <td class="oil">${fmt(r.phi_ext, 4)}</td><td>±${fmt(100 * r.gci_fine, 2)} %</td><td>${fmt(r.ito, 3)}</td>
+        <td><span class="chip ${ok ? 'good' : 'warn'}">${ok ? 'independent' : 'needs fine mesh'}</span></td></tr>`; }).join('');
+  }
+
+  // ---------- result 2: oscillating ----------
+  let qty = 'b';
+  function osc() {
+    const ro = document.getElementById('ro-osc');
+    const by = X => D.osc.filter(r => r.X_target_mm === X).sort((a, b) => a.f - b.f);
+    const isB = qty === 'b';
+    const key = isB ? 'b_ratio' : 'c_ratio';
+    const tip = rows => i => { const r = rows[i]; return `${r.case} · f <b>${r.f} Hz</b>, stroke <b>${fmt(r.X_mm, 1)} mm</b>, De <b>${fmt(r.De_amp, 0)}</b>, Wo ${fmt(r.alpha, 2)}<br>` +
+      (isB ? `b_eq <b>${fmt(r.b_eq, 1)} kg</b> = ${fmt(r.b_ratio, 3)} × ideal · straight pipe ${fmt(r.b_womersley_ratio, 3)} ×`
+           : `c_eq <b>${fmt(r.c_eq, 0)} N·s/m</b> = ${fmt(r.c_ratio, 2)} × c_lin · correlation ${fmt(r.c_qs_ratio, 2)} × · straight pipe ${fmt(r.c_womersley_ratio, 2)} ×`); };
+    const r2 = by(2), r5 = by(5);
+    const series = [{ type: 'line', xs: D.wom.f, ys: isB ? D.wom.b : D.wom.c, color: '--ink', w: 2 }];
+    if (isB) series.push({ type: 'line', xs: [0.5, 30], ys: [1, 1], color: '--slate', dash: '3 4', w: 1.5 });
+    else { series.push({ type: 'pts', xs: r2.map(r => r.f), ys: r2.map(r => r.c_qs_ratio), color: '--steel', hollow: true, r: 4, tip: tip(r2) },
+                       { type: 'pts', xs: r5.map(r => r.f), ys: r5.map(r => r.c_qs_ratio), color: '--steel', hollow: true, r: 4, shape: 'sq', tip: tip(r5) }); }
+    series.push({ type: 'pts', join: true, xs: r2.map(r => r.f), ys: r2.map(r => r[key]), color: '--oil', tip: tip(r2) },
+                { type: 'pts', join: true, shape: 'sq', xs: r5.map(r => r.f), ys: r5.map(r => r[key]), color: '--warn', tip: tip(r5) });
+    chart(document.getElementById('chart-osc'), {
+      aria: isB ? 'Effective inertance ratio vs frequency' : 'Effective damping ratio vs frequency', xLog: true, x: [0.5, 30],
+      y: isB ? [0.95, 1.4] : [0.8, 3.6], readout: ro, xTicks: [0.5, 1, 2, 5, 10, 20],
+      yTicks: isB ? [1, 1.1, 1.2, 1.3, 1.4] : [1, 1.5, 2, 2.5, 3, 3.5], yFmt: t => fmt(t, 1), xLabel: 'Frequency [Hz]',
+      yLabel: isB ? 'b_eq / b_ideal' : 'c_eq / c_lin (straight laminar pipe)', series });
+    document.getElementById('osc-title').innerHTML = isB ? 'Effective inertance, b<sub>eq</sub> / b<sub>ideal</sub>' : 'Parasitic damping, c<sub>eq</sub> / c<sub>lin</sub>';
+    legend(document.getElementById('leg-osc'), [['dot', '--oil', 'CFD, 2 mm stroke'], ['dot', '--warn', 'CFD, 5 mm stroke'], ['line', '--ink', 'Womersley, straight pipe (exact)'],
+      isB ? ['line', '--slate', 'Ideal inerter', true] : ['dot', '--steel', 'Quasi-steady curved-pipe correlation']]);
+    ro.textContent = 'Hover a point.';
+  }
+  const setQ = q => { qty = q; document.getElementById('q-b').setAttribute('aria-pressed', q === 'b'); document.getElementById('q-c').setAttribute('aria-pressed', q === 'c'); osc(); };
+  document.getElementById('q-b').addEventListener('click', () => setQ('b'));
+  document.getElementById('q-c').addEventListener('click', () => setQ('c'));
+
+  // ---------- result 3: grip ----------
+  function grip() {
+    const max = 10;
+    document.getElementById('bars').innerHTML = D.vehicle.map(v => {
+      const cls = v.model.startsWith('Ideal') ? 'ideal' : v.model.startsWith('CFD') ? 'cfd' : '';
+      return `<div class="bar ${cls}" title="Optimal nominal inertance ${v.b} kg"><span class="lab">${v.model}</span><span class="track"><span class="fill" style="width:${100 * v.gain / max}%"></span></span><span class="val">${fmt(v.gain, 1)}%</span></div>`; }).join('');
+    document.getElementById('lay-body').innerHTML = D.layouts.map(l => `<tr><td class="mono">${l.name.replace(/\|\|/g, '‖')}</td><td>${fmt(l.ideal, 1)} %</td><td ${l.fluid > 0 ? 'class="oil"' : ''}>${fmt(l.fluid, 1)} %</td></tr>`).join('');
+    const ro = document.getElementById('ro-d');
+    chart(document.getElementById('chart-d'), {
+      aria: 'Grip gain vs channel diameter', xLog: false, x: [2.5, 12.5], y: [0, 10], readout: ro, xTicks: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], yTicks: [0, 2, 4, 6, 8, 10],
+      xLabel: 'Channel diameter d [mm]', yLabel: 'Grip gain [%]',
+      series: [{ type: 'line', xs: [2.5, 12.5], ys: [8.69, 8.69], color: '--steel', dash: '5 4', w: 1.5 },
+               { type: 'pts', join: true, xs: D.dchart.d, ys: D.dchart.gain, color: '--oil', r: 5,
+                 tip: i => { const d = D.dchart.d[i] / 1000, len = 127 * Math.PI * d * d / 4 / (870 * Math.pow(Math.PI * 0.04 * 0.04 / 4, 2));
+                   return `d <b>${D.dchart.d[i]} mm</b>: grip gain <b>${fmt(D.dchart.gain[i], 1)} %</b> (ideal limit 8.7 %)<br>coil length needed for b = 127 kg with a 40 mm piston: <b>${fmt(len, 2)} m</b>`; } }] });
+  }
+
+  // ---------- calculator ----------
+  const ids = ['Dp', 'd', 'R', 'n', 'X', 'f'], units = { Dp: ' mm', d: ' mm', R: ' mm', n: '', X: ' mm', f: ' Hz' };
+  function ito(De) { return De > 13.5 ? Math.max(1, 21.5 * De / Math.pow(1.56 + Math.log10(De), 5.73)) : 1; }
+  function calc() {
+    const g = {}; ids.forEach(k => { g[k] = parseFloat(document.getElementById('in-' + k).value); document.getElementById('o-' + k).textContent = g[k] + units[k]; });
+    const rho = 870, mu = 0.028, nu = mu / rho;
+    const Dp = g.Dp / 1e3, d = g.d / 1e3, R = g.R / 1e3, X = g.X / 1e3, w = 2 * Math.PI * g.f, pitch = d + 0.004;
+    const Ap = Math.PI * Dp * Dp / 4, Ac = Math.PI * d * d / 4, l = g.n * Math.hypot(2 * Math.PI * R, pitch);
+    const b = rho * l * Ap * Ap / Ac, clin = 128 * mu * l * Ap * Ap / (Math.PI * Math.pow(d, 4));
+    const v = Ap / Ac * X * w, Re = v * d / nu, delta = d / 2 / R, De = Re * Math.sqrt(delta), Wo = d / 2 * Math.sqrt(w / nu);
+    const Recrit = 2300 * (1 + 8.6 * Math.pow(delta, 0.45)), ratio = ito(De);
+    const Fpk = b * X * w * w, dpb = Fpk / Ap / 1e6, dpl = (ratio * 32 * mu * l * v / (d * d)) / 1e6;
+    const turb = Re > Recrit;
+    const o = [
+      ['Ideal inertance b', fmt(b, 1), 'kg'], ['Channel length l', fmt(l, 2), 'm'],
+      ['Oil in channel', fmt(rho * Ac * l * 1000, 0), 'g'], ['Straight-pipe damping c_lin', fmt(clin, 0), 'N·s/m'],
+      ['Peak channel velocity', fmt(v, 1), 'm/s'], ['Reynolds number (peak)', fmt(Re, 0), turb ? '<span class="chip warn">above transition</span>' : '<span class="chip good">laminar</span>'],
+      ['Dean number (peak)', fmt(De, 0), ''], ['Womersley number', fmt(Wo, 2), Wo > 1 ? 'unsteady profile' : 'quasi-steady'],
+      ['Curvature loss factor (Ito)', fmt(ratio, 2), '× straight pipe'], ['Damping per kg, c_par/b', fmt(32 * nu / (d * d) * ratio, 0), '1/s'],
+      ['Peak inertial force', fmt(Fpk / 1000, 2), 'kN'], ['Coil envelope', fmt((2 * R + d) * 1000 + 8, 0) + ' × ' + fmt(g.n * pitch * 1000, 0), 'mm (dia × height)'],
+    ];
+    const pre = (dpb + dpl) / 2;
+    document.getElementById('outs').innerHTML = o.map(([k, v2, u]) => `<div class="o"><span class="k">${k}</span><span class="v">${v2} <small>${u}</small></span></div>`).join('') +
+      `<div class="o wide"><span class="k">Cavitation: minimum pre-charge pressure</span><span class="v">${fmt(pre + 0.002, 2)} <small>MPa (inertial ${fmt(dpb, 2)} + friction ${fmt(dpl, 2)} MPa across the piston, halved, plus vapour pressure)</small></span></div>`;
+  }
+  ids.forEach(k => document.getElementById('in-' + k).addEventListener('input', calc));
+
+  // ---------- copy buttons ----------
+  document.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => {
+    const code = document.getElementById(btn.dataset.copy);
+    navigator.clipboard.writeText(code.textContent).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy', 1500); })
+      .catch(() => { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+  }));
+
+  // ---------- flow-visualisation player ----------
+  (function player() {
+    const NF = 48, img = document.getElementById('pl-img'), slider = document.getElementById('pl-phase'),
+          out = document.getElementById('pl-out'), btn = document.getElementById('pl-play');
+    let caseName = 'osc_X2', k = 0, speed = 0.5, timer = null;
+    const src = (c, i) => `cfd/results/demo/${c}/frame_${String(i).padStart(2, '0')}.png`;
+    const cache = {};
+    const preload = c => { if (cache[c]) return; cache[c] = []; for (let i = 0; i < NF; i++) { const im = new Image(); im.src = src(c, i); cache[c].push(im); } };
+    const show = () => { img.src = src(caseName, k); slider.value = k; out.textContent = Math.round(k * 360 / NF) + '°'; };
+    const tick = () => { k = (k + 1) % NF; show(); };
+    const play = on => {
+      clearInterval(timer); timer = null;
+      if (on) timer = setInterval(tick, 1000 / (NF * speed * 0.5));   // 1x = one cycle per 2 s (the real cycle is 0.1 s)
+      btn.textContent = on ? 'Pause' : 'Play'; btn.setAttribute('aria-label', on ? 'Pause' : 'Play');
+    };
+    btn.addEventListener('click', () => play(!timer));
+    slider.addEventListener('input', () => { play(false); k = +slider.value; show(); });
+    const setCase = c => { caseName = c; preload(c);
+      document.getElementById('pl-x2').setAttribute('aria-pressed', c === 'osc_X2');
+      document.getElementById('pl-x5').setAttribute('aria-pressed', c === 'osc_X5'); show(); };
+    document.getElementById('pl-x2').addEventListener('click', () => setCase('osc_X2'));
+    document.getElementById('pl-x5').addEventListener('click', () => setCase('osc_X5'));
+    document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => {
+      speed = +b.dataset.speed;
+      document.querySelectorAll('[data-speed]').forEach(o => o.setAttribute('aria-pressed', o === b));
+      if (timer) play(true);
+    }));
+    preload('osc_X2'); setTimeout(() => preload('osc_X5'), 1500);
+  })();
+
+  function drawAll() { schematic(); friction(); osc(); grip(); }
+  drawAll(); calc();
+  // redraw SVG colours when the theme changes
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+  new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Piston chamber + port set: mesh once, then run every case serially, several at once.
+#   ./Allrun [nParallelCases]      (default 8)
+cd "${0%/*}" || exit 1
+NJ=${1:-8}
+command -v simpleFoam >/dev/null || { echo "OpenFOAM environment not loaded"; exit 1; }
+( cd mesh && blockMesh > log.blockMesh 2>&1 && topoSet > log.topoSet 2>&1 && checkMesh > log.checkMesh 2>&1 ) \
+    || { echo "meshing failed, see mesh/log.*"; exit 1; }
+grep -E "cells:|Mesh OK|Failed" mesh/log.checkMesh
+run_case() {
+    c=$1
+    rm -rf "$c/constant/polyMesh" "$c/postProcessing"
+    cp -r mesh/constant/polyMesh "$c/constant/"
+    cd "$c" || return
+    app=$(foamDictionary -entry application -value system/controlDict)
+    $app > log.$app 2>&1
+    if grep -q "^End" log.$app; then echo "$c: finished"; else echo "$c: FAILED, see $c/log.$app"; fi
+}
+export -f run_case
+# longest cases first
+ls -d cav_* osc_* in_* out_* 2>/dev/null | xargs -P "$NJ" -I{} bash -c 'run_case {}'
+echo "Done."

@@ -1,0 +1,16 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2406                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _1653fa08-20260127 OPENFOAM=2406 patch=260127 version=2406
+Arch   : "LSB;label=32;scalar=64"
+Exec   : foamFormatConvert -time 0.104167
+Date   : Oct 14 2026
+Time   : 17:54:45
+Host   : LAPTOP-VT0TTNBQ
+PID    : 2367
+fileName::stripInvalid() called for invalid fileName /mnt/c/Users/RishiKumar/Downloads/PneumaticsandHydraulics/cfd/paraview
+    For debug level (= 2) > 1 this is considered fatal

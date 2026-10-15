@@ -1,0 +1,23 @@
+##### torus_oscillatory  (12:14)
+T03: finished ()
+T04: finished ()
+T02: finished ()
+T05: finished ()
+T01: finished ()
+T08: finished ()
+T07: finished ()
+T09: finished ()
+T06: finished ()
+T10: finished ()
+Done.
+##### torus_oscillatory finished (12:31)
+##### torus_steady_medium  (12:31)
+re00250: finished (SIMPLE solution converged in 747 iterations)
+re00100: finished (SIMPLE solution converged in 782 iterations)
+re00500: finished (SIMPLE solution converged in 761 iterations)
+re01000: finished (SIMPLE solution converged in 968 iterations)
+re02000: finished ()
+re04000: finished ()
+Done.
+##### torus_steady_medium finished (12:32)
+ALL SETS DONE

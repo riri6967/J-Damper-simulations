@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1">
+<Collection>
+  <DataSet timestep="0" part="0" file="coil_00.vtp"/>
+  <DataSet timestep="0.004167" part="0" file="coil_01.vtp"/>
+  <DataSet timestep="0.008333" part="0" file="coil_02.vtp"/>
+  <DataSet timestep="0.0125" part="0" file="coil_03.vtp"/>
+  <DataSet timestep="0.016667" part="0" file="coil_04.vtp"/>
+  <DataSet timestep="0.020833" part="0" file="coil_05.vtp"/>
+  <DataSet timestep="0.025" part="0" file="coil_06.vtp"/>
+  <DataSet timestep="0.029167" part="0" file="coil_07.vtp"/>
+  <DataSet timestep="0.033333" part="0" file="coil_08.vtp"/>
+  <DataSet timestep="0.0375" part="0" file="coil_09.vtp"/>
+  <DataSet timestep="0.041667" part="0" file="coil_10.vtp"/>
+  <DataSet timestep="0.045833" part="0" file="coil_11.vtp"/>
+  <DataSet timestep="0.05" part="0" file="coil_12.vtp"/>
+  <DataSet timestep="0.054167" part="0" file="coil_13.vtp"/>
+  <DataSet timestep="0.058333" part="0" file="coil_14.vtp"/>
+  <DataSet timestep="0.0625" part="0" file="coil_15.vtp"/>
+  <DataSet timestep="0.066667" part="0" file="coil_16.vtp"/>
+  <DataSet timestep="0.070833" part="0" file="coil_17.vtp"/>
+  <DataSet timestep="0.075" part="0" file="coil_18.vtp"/>
+  <DataSet timestep="0.079167" part="0" file="coil_19.vtp"/>
+  <DataSet timestep="0.083333" part="0" file="coil_20.vtp"/>
+  <DataSet timestep="0.0875" part="0" file="coil_21.vtp"/>
+  <DataSet timestep="0.091667" part="0" file="coil_22.vtp"/>
+  <DataSet timestep="0.095833" part="0" file="coil_23.vtp"/>
+</Collection>
+</VTKFile>

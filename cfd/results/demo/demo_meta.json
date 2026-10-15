@@ -1,0 +1,14 @@
+[
+  {
+    "name": "osc_X2",
+    "freq": 10.0,
+    "stroke_mm": 2.27,
+    "frames": 48
+  },
+  {
+    "name": "osc_X5",
+    "freq": 10.0,
+    "stroke_mm": 5.61,
+    "frames": 48
+  }
+]

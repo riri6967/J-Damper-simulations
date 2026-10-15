@@ -1,0 +1,61 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2406                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _1653fa08-20260127 OPENFOAM=2406 patch=260127 version=2406
+Arch   : "LSB;label=32;scalar=64"
+Exec   : potentialFoam -initialiseUBCs -parallel
+Date   : Oct 14 2026
+Time   : 11:39:34
+Host   : LAPTOP-VT0TTNBQ
+PID    : 2326
+I/O    : uncollated
+Case   : /home/ishi_umar/inerter/s01/re02000
+nProcs : 8
+Hosts  :
+(
+    (LAPTOP-VT0TTNBQ 8)
+)
+Pstream initialized with:
+    floatTransfer      : false
+    maxCommsSize       : 0
+    nProcsSimpleSum    : 0
+    nonBlockingExchange: 0 (tuning: 0)
+    exchange algorithm : 0
+    commsType          : nonBlocking
+    polling iterations : 0
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+
+potentialFlow: Operating solver in PISO mode
+
+Reading velocity field U
+
+Constructing pressure field p
+
+Constructing velocity potential field Phi
+
+No MRF models present
+
+
+Calculating potential flow
+GAMG:  Solving for Phi, Initial residual = 1, Final residual = 0.009827234814, No Iterations 664
+GAMG:  Solving for Phi, Initial residual = 0.0001156727442, Final residual = 1.134151874e-06, No Iterations 204
+GAMG:  Solving for Phi, Initial residual = 3.73107727e-05, Final residual = 3.726378477e-07, No Iterations 104
+Continuity error = 0.00399716629
+Interpolated velocity error = 2.110064556e-07
+ExecutionTime = 36.11 s  ClockTime = 36 s
+
+End
+
+Finalising parallel run

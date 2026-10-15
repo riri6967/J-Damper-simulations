@@ -1,0 +1,20 @@
+#!/bin/bash
+# Run every case of this set, each SERIAL, several at once (tiny meshes: no decomposition).
+#   ./Allrun [nParallelCases]      (default 8)
+cd "${0%/*}" || exit 1
+NJ=${1:-8}
+command -v simpleFoam >/dev/null || { echo "OpenFOAM environment not loaded"; exit 1; }
+run_case() {
+    c=$1
+    rm -rf "$c/constant/polyMesh" "$c/postProcessing"
+    cp -r mesh/constant/polyMesh "$c/constant/"
+    cd "$c" || return
+    app=$(foamDictionary -entry application -value system/controlDict)
+    checkMesh > log.checkMesh 2>&1
+    $app > log.$app 2>&1
+    if grep -q "^End" log.$app; then echo "$c: finished ($(grep -m1 'converged in' log.$app))"
+    else echo "$c: FAILED, see $c/log.$app"; fi
+}
+export -f run_case
+ls -d osc_* st_* 2>/dev/null | xargs -P "$NJ" -I{} bash -c 'run_case {}'
+echo "Done."

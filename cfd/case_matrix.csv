@@ -1,0 +1,12 @@
+case_id,type,freq_Hz,piston_amp_mm,priority,notes
+S01,steady,0,0,1,Re sweep 100-8000 (8-10 points) for correlation validation
+T01,transient,1,5,1,quasi-steady reference (low Womersley)
+T02,transient,2,5,1,body-mode region
+T03,transient,5,5,1,
+T04,transient,10,5,1,wheel-hop region
+T05,transient,20,2,1,high frequency; check cavitation pressure
+T06,transient,1,2,2,amplitude dependence
+T07,transient,2,2,2,
+T08,transient,5,2,2,
+T09,transient,10,2,2,
+T10,transient,15,2,2,

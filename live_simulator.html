@@ -1,0 +1,382 @@
+<meta charset="utf-8">
+<title>Inerter Live Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one instrument panel: big car view on top, inerter cut-away + live traces below, controls in a strip. */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d3dae1; --grid: #e5e9ee;
+  --oil: #b26d10; --steel: #2c6496; --slate: #7b8996; --road: #4a5560; --tyre: #2a2f35; --body: #c9d3dc;
+  --c-conv: #7b8996; --c-ideal: #2c6496; --c-cfd: #b26d10;
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1318; --surface: #161e26; --ink: #e4e9ee; --muted: #93a1ae; --line: #2a3541; --grid: #212b35;
+  --oil: #e2a13b; --steel: #6ea6d8; --slate: #8d9aa6; --road: #8c97a2; --tyre: #0b0e11; --body: #3a4652;
+  --c-conv: #8d9aa6; --c-ideal: #6ea6d8; --c-cfd: #e2a13b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1318; --surface: #161e26; --ink: #e4e9ee; --muted: #93a1ae; --line: #2a3541; --grid: #212b35;
+  --oil: #e2a13b; --steel: #6ea6d8; --slate: #8d9aa6; --road: #8c97a2; --tyre: #0b0e11; --body: #3a4652;
+  --c-conv: #8d9aa6; --c-ideal: #6ea6d8; --c-cfd: #e2a13b; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.55 var(--f-body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 22px 40px; display: grid; gap: 16px; }
+h1 { font: 700 clamp(1.9rem, 4.4vw, 2.8rem)/1 var(--f-display); text-transform: uppercase; margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); max-width: 75ch; margin: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); min-width: 0; }
+.ptitle { font: 600 .82rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 12px 0; }
+canvas { display: block; width: 100%; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 12px; }
+.ctl { display: flex; align-items: center; gap: 8px; font-size: .84rem; }
+.ctl label { color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); flex-wrap: wrap; }
+.seg button { font: 500 .78rem/1 var(--f-mono); padding: 7px 10px; background: transparent; color: var(--muted); border: 0; border-right: 1px solid var(--line); cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.play { font: 600 .85rem/1 var(--f-body); background: var(--oil); color: #fff; border: 0; padding: 9px 18px; cursor: pointer; min-width: 6em; }
+input[type="range"] { accent-color: var(--oil); width: 120px; }
+output { font-family: var(--f-mono); color: var(--ink); min-width: 3.5em; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
+.row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
+.readouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.readouts div { padding: 8px 12px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
+.readouts div:last-child { border-right: 0; }
+.readouts .k { font: 500 .66rem/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.readouts .v { font: 700 1.25rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.grip { display: grid; gap: 8px; padding: 10px 12px 12px; }
+.gbar { display: grid; grid-template-columns: 11.5em minmax(0, 1fr) 5.2em; gap: 10px; align-items: center; font-size: .84rem; }
+.gbar .tr { height: 16px; background: var(--grid); position: relative; }
+.gbar .fl { position: absolute; inset: 0 auto 0 0; }
+.gbar .val { font: 500 .88rem/1 var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.note { font-size: .82rem; color: var(--muted); padding: 0 12px 12px; margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; color: var(--muted); padding: 0 12px 10px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+footer { color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 4px; }
+@media (max-width: 560px) { .readouts { grid-template-columns: 1fr 1fr; } .gbar { grid-template-columns: 1fr 4.6em; } .gbar .tr { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+
+<div class="wrap">
+  <h1>Inerter live simulator</h1>
+  <p class="sub">Three race-car corners drive over the same road at the same time: a <b>conventional</b> suspension, a <b>J-damper with an ideal inerter</b>, and a <b>J-damper with the CFD-measured fluid inerter</b>. The physics (a quarter-car model) runs live in your browser, with suspension settings optimised in the project. Movements are magnified so you can see them.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button type="button" class="play" id="play">Pause</button>
+      <div class="ctl"><label>Watch</label>
+        <div class="seg" role="group" aria-label="Car shown"><button type="button" data-car="0" aria-pressed="false">Conventional</button><button type="button" data-car="1" aria-pressed="false">Ideal J-damper</button><button type="button" data-car="2" aria-pressed="true">CFD J-damper</button></div></div>
+      <div class="ctl"><label>Road</label>
+        <div class="seg" role="group" aria-label="Road"><button type="button" data-road="A" aria-pressed="true">Race track</button><button type="button" data-road="C" aria-pressed="false">Rough road</button><button type="button" data-road="K" aria-pressed="false">Kerb strikes</button></div></div>
+      <div class="ctl"><label for="slow">Slow motion</label><input type="range" id="slow" min="0" max="4" step="1" value="1"><output id="slow-o"></output></div>
+      <div class="ctl"><label for="speed">Car speed</label><input type="range" id="speed" min="20" max="80" step="5" value="50"><output id="speed-o"></output></div>
+      <div class="ctl"><label for="mag">Magnify motion</label><input type="range" id="mag" min="2" max="40" step="1" value="12"><output id="mag-o"></output></div>
+    </div>
+    <div class="ptitle" id="car-title">Car view</div>
+    <canvas id="car" height="380" aria-label="Animated quarter-car: wheel, suspension and body moving over the road"></canvas>
+    <div class="readouts">
+      <div><span class="k">Tyre load change now</span><span class="v" id="r-ft">0</span></div>
+      <div><span class="k">Suspension travel now</span><span class="v" id="r-st">0</span></div>
+      <div><span class="k">Simulated time</span><span class="v" id="r-t">0</span></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="panel">
+      <div class="ptitle">Fluid inerter cut-away (selected car)</div>
+      <canvas id="iner" height="250" aria-label="Animated cut-away of the fluid inerter: piston and oil flowing through the helical channel"></canvas>
+      <div class="readouts">
+        <div><span class="k">Piston speed</span><span class="v" id="r-vp">0</span></div>
+        <div><span class="k">Oil speed in coil</span><span class="v" id="r-vo">0</span></div>
+        <div><span class="k">Inerter force</span><span class="v" id="r-fi">0</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Live tyre load (last 1.5 s) and grip score</div>
+      <canvas id="trace" height="170" aria-label="Live traces of dynamic tyre load for the three cars"></canvas>
+      <div class="legend"><span><i style="border-color:var(--c-conv)"></i>Conventional</span><span><i style="border-color:var(--c-ideal)"></i>Ideal J-damper</span><span><i style="border-color:var(--c-cfd)"></i>CFD J-damper</span></div>
+      <div class="grip" id="grip"></div>
+      <p class="note">Grip score = RMS of the tyre-load fluctuation as a % of static load, averaged since the last reset (lower is better). On the race track it settles near the project result: about 8.6 % less fluctuation with the ideal inerter and about 4 % with the CFD inerter.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Model: quarter car m<sub>s</sub> = 250 kg, m<sub>u</sub> = 35 kg, k<sub>s</sub> = 80 kN/m, k<sub>t</sub> = 300 kN/m, road ISO 8608 (class A track / class C rough). J-damper branch: spring k<sub>2</sub>, damper c<sub>2</sub> and inerter b in series, in parallel with the main spring. Values come from the project optimisation (python/run_cfd_vehicle_study.py).</span>
+    <span>CFD inerter: nominal b = 107.7 kg, effective inertance 1.06 × b and parasitic damping 64 N·s/m per kg (CFD values at 10 Hz). With the full frequency-dependent CFD model the gain is 5.0 %; this fixed-frequency version gives about 4 %.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ---------------- physics ----------------
+  const P = { ms: 250, mu: 35, ks: 80e3, kt: 300e3, g: 9.81 };
+  const CARS = [
+    { name: 'Conventional', color: '--c-conv', cs: 3039.3, branch: null },
+    { name: 'Ideal J-damper', color: '--c-ideal', cs: 0, branch: { k2: 527478, c2: 3586.5, b: 297.92, bEff: 297.92, cPar: 0 } },
+    { name: 'CFD J-damper', color: '--c-cfd', cs: 0, branch: { k2: 519513, c2: 5287.8, b: 107.69, bEff: 107.69 * 1.0589, cPar: 107.69 * 64.4 } },
+  ];
+  const AP = Math.PI * 0.04 * 0.04 / 4, AC = Math.PI * 0.006 * 0.006 / 4, AREA_RATIO = AP / AC;
+  const STATIC = (P.ms + P.mu) * P.g;
+
+  // road: harmonic superposition of ISO 8608 spectrum in DISTANCE (independent of speed)
+  function makeRoad(kind) {
+    const Gd0 = kind === 'C' ? 256e-6 : 16e-6, n0 = 0.1, comps = [];
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const nMin = 0.01, nMax = 2.5, N = 400, dn = (nMax - nMin) / N;
+    for (let i = 0; i < N; i++) {
+      const n = nMin + (i + 0.5) * dn, Gd = Gd0 * Math.pow(n / n0, -2);
+      comps.push([Math.sqrt(2 * Gd * dn), 2 * Math.PI * n, 2 * Math.PI * rnd()]);
+    }
+    const kerb = kind === 'K';
+    return s => {
+      let z = 0;
+      for (const [A, k, ph] of comps) z += A * Math.sin(k * s + ph);
+      if (kerb) {                                     // 25 mm rounded kerb, 0.5 m long, every 40 m
+        const u = ((s % 40) + 40) % 40;
+        if (u < 0.5) z += 0.025 * Math.sin(Math.PI * u / 0.5) ** 2;
+      }
+      return z;
+    };
+  }
+
+  function newState(car) { return { y: new Float64Array(car.branch ? 7 : 4), t: 0, sum2: 0, n: 0, hist: [] }; }
+
+  function deriv(car, y, zr, out) {
+    const xs = y[0] - y[1], vs = y[2] - y[3];
+    let F = P.ks * xs + car.cs * vs, Fb = 0;
+    if (car.branch) {
+      const br = car.branch;
+      Fb = br.k2 * (xs - y[4] - y[6]);
+      F += Fb;
+      out[4] = y[5];
+      out[5] = (Fb - br.cPar * y[5]) / br.bEff;     // inerter (+ CFD parasitic damping)
+      out[6] = Fb / br.c2;                           // series damper
+    }
+    out[0] = y[2]; out[1] = y[3];
+    out[2] = -F / P.ms;
+    out[3] = (F - P.kt * (y[1] - zr)) / P.mu;
+    return Fb;
+  }
+
+  const k1 = new Float64Array(7), k2 = new Float64Array(7), k3 = new Float64Array(7), k4 = new Float64Array(7), tmp = new Float64Array(7);
+  function step(car, st, dt, zr0, zr1) {
+    const y = st.y, n = y.length, zm = 0.5 * (zr0 + zr1);
+    deriv(car, y, zr0, k1);
+    for (let i = 0; i < n; i++) tmp[i] = y[i] + 0.5 * dt * k1[i]; deriv(car, tmp, zm, k2);
+    for (let i = 0; i < n; i++) tmp[i] = y[i] + 0.5 * dt * k2[i]; deriv(car, tmp, zm, k3);
+    for (let i = 0; i < n; i++) tmp[i] = y[i] + dt * k3[i]; deriv(car, tmp, zr1, k4);
+    for (let i = 0; i < n; i++) y[i] += dt / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+    st.t += dt;
+  }
+
+  // ---------------- state & controls ----------------
+  const SLOW = [0.02, 0.05, 0.1, 0.25, 1], DT = 2e-4;
+  let roadKind = 'A', road = makeRoad('A'), speed = 50, slow = SLOW[1], mag = 12, sel = 2, running = true;
+  let states = CARS.map(newState), dist = 0, simT = 0, oilPhase = 0;
+  const particles = Array.from({ length: 70 }, (_, i) => i / 70);
+  function reset() { states = CARS.map(newState); dist = 0; simT = 0; }
+
+  const $ = id => document.getElementById(id);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const setPressed = (sel, el) => document.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', b === el));
+  document.querySelectorAll('[data-car]').forEach(b => b.addEventListener('click', () => { sel = +b.dataset.car; setPressed('[data-car]', b); }));
+  document.querySelectorAll('[data-road]').forEach(b => b.addEventListener('click', () => {
+    roadKind = b.dataset.road; road = makeRoad(roadKind); setPressed('[data-road]', b); reset(); }));
+  const sync = () => {
+    slow = SLOW[+$('slow').value]; $('slow-o').textContent = slow === 1 ? 'real time' : '×' + slow;
+    speed = +$('speed').value; $('speed-o').textContent = speed * 3.6 + ' km/h';
+    mag = +$('mag').value; $('mag-o').textContent = '×' + mag;
+  };
+  ['slow', 'speed', 'mag'].forEach(id => $(id).addEventListener('input', () => { sync(); if (id === 'speed') reset(); }));
+  $('play').addEventListener('click', () => { running = !running; $('play').textContent = running ? 'Pause' : 'Play'; if (running) last = performance.now(); });
+  sync();
+
+  // ---------------- canvases ----------------
+  function fit(cv) {
+    const r = devicePixelRatio || 1, w = cv.clientWidth, h = +(cv.dataset.h || (cv.dataset.h = cv.getAttribute('height')));
+    if (cv.width !== Math.round(w * r) || cv.height !== Math.round(h * r)) { cv.width = Math.round(w * r); cv.height = Math.round(h * r); cv.style.height = h + 'px'; }
+    const c = cv.getContext('2d'); c.setTransform(r, 0, 0, r, 0, 0); return [c, w, h];
+  }
+  function coil(c, x, y0, y1, w, turns, color, lw) {
+    c.beginPath(); c.moveTo(x, y0);
+    const n = turns * 2, L = y1 - y0;
+    c.lineTo(x, y0 + L * 0.08);
+    for (let i = 0; i <= n; i++) c.lineTo(x + (i % 2 ? w : -w) * (i === 0 || i === n ? 0 : 1), y0 + L * (0.08 + 0.84 * i / n));
+    c.lineTo(x, y1); c.strokeStyle = color; c.lineWidth = lw; c.stroke();
+  }
+  function damper(c, x, y0, y1, w, color) {             // y0 = bottom (hub side), y1 = top (body side); body tube on top
+    const L = y0 - y1, tubeTop = y1, tubeBot = y1 + Math.min(L * 0.62, 60);
+    c.fillStyle = css('--surface'); c.strokeStyle = color; c.lineWidth = 2;
+    c.fillRect(x - w, tubeTop, 2 * w, tubeBot - tubeTop); c.strokeRect(x - w, tubeTop, 2 * w, tubeBot - tubeTop);
+    const pist = Math.min(tubeBot - 6, y0 - 8);
+    c.beginPath(); c.moveTo(x - w + 2, pist); c.lineTo(x + w - 2, pist); c.lineWidth = 3; c.stroke();
+    c.beginPath(); c.moveTo(x, pist); c.lineTo(x, y0); c.lineWidth = 2.5; c.stroke();
+  }
+  function inerterSym(c, x, y0, y1, color) {
+    const ym = (y0 + y1) / 2, h = Math.min(26, Math.abs(y0 - y1) * 0.6);
+    c.strokeStyle = color; c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(x, y0); c.lineTo(x, ym + h / 2); c.moveTo(x, ym - h / 2); c.lineTo(x, y1); c.stroke();
+    c.fillStyle = css('--surface'); c.fillRect(x - 13, ym - h / 2, 26, h); c.strokeRect(x - 13, ym - h / 2, 26, h);
+    c.beginPath(); c.moveTo(x - 9, ym - h / 2 + 4); c.lineTo(x + 9, ym + h / 2 - 4); c.moveTo(x - 9, ym + h / 2 - 4); c.lineTo(x + 9, ym - h / 2 + 4);
+    c.lineWidth = 1.5; c.stroke();
+  }
+
+  function drawCar() {
+    const [c, W, H] = fit($('car'));
+    const car = CARS[sel], st = states[sel], y = st.y;
+    c.clearRect(0, 0, W, H);
+    const pxH = W / 7, pxV = 1000 * mag / 10, base = H - 70;    // 7 m of road across; 1 mm -> mag/10 px
+    const wheelX = Math.min(W * 0.36, 330), Rt = 52;
+    // road
+    c.beginPath();
+    for (let px = 0; px <= W; px += 3) { const s = dist + (px - wheelX) / pxH; c.lineTo(px, base - road(s) * pxV); }
+    c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fillStyle = css('--grid'); c.fill();
+    c.strokeStyle = css('--road'); c.lineWidth = 3; c.beginPath();
+    for (let px = 0; px <= W; px += 3) { const s = dist + (px - wheelX) / pxH; px ? c.lineTo(px, base - road(s) * pxV) : c.moveTo(px, base - road(s) * pxV); }
+    c.stroke();
+    // road markers to show motion
+    c.fillStyle = css('--muted');
+    for (let m = Math.ceil(dist - wheelX / pxH); m < dist + (W - wheelX) / pxH; m++) {
+      const px = wheelX + (m - dist) * pxH; c.fillRect(px - 1, H - 26, 2, 8);
+      if (m % 2 === 0) { c.font = '10px ' + css('--f-mono'); c.fillText(m + ' m', px + 4, H - 14); }
+    }
+    // wheel (hub follows zu; tyre squashes against the road)
+    const zr = road(dist), hubY = base - y[1] * pxV - Rt + 4, contactY = base - zr * pxV;
+    const squash = Math.max(0, hubY + Rt - contactY);
+    c.fillStyle = css('--tyre'); c.beginPath(); c.ellipse(wheelX, hubY + squash / 2, Rt + squash * 0.3, Rt - squash / 2, 0, 0, 2 * Math.PI); c.fill();
+    c.fillStyle = css('--slate'); c.beginPath(); c.arc(wheelX, hubY, Rt * 0.55, 0, 2 * Math.PI); c.fill();
+    const rot = dist / 0.33;
+    c.strokeStyle = css('--surface'); c.lineWidth = 3;
+    for (let i = 0; i < 5; i++) { const a = rot + i * 2 * Math.PI / 5; c.beginPath(); c.moveTo(wheelX, hubY); c.lineTo(wheelX + Math.cos(a) * Rt * 0.5, hubY + Math.sin(a) * Rt * 0.5); c.stroke(); }
+    // upright / hub carrier
+    c.fillStyle = css('--slate'); c.fillRect(wheelX - 70, hubY - 8, 140, 12);
+    // body
+    const L0 = 150, bodyY = hubY - 8 - L0 - (y[0] - y[1]) * pxV;
+    c.fillStyle = css('--body'); c.strokeStyle = css('--ink'); c.lineWidth = 1.5;
+    c.fillRect(wheelX - 120, bodyY - 70, 240 + Math.min(W - wheelX - 140, 260), 70); c.strokeRect(wheelX - 120, bodyY - 70, 240 + Math.min(W - wheelX - 140, 260), 70);
+    c.fillStyle = css('--ink'); c.font = '600 12px ' + css('--f-body');
+    c.fillText(`${car.name}: car body (sprung mass 250 kg)`, wheelX - 108, bodyY - 48);
+    const top = bodyY, bot = hubY - 8;
+    // main spring + damper
+    coil(c, wheelX - 50, bot, top, 14, 7, css('--ink'), 2.4);
+    if (car.cs > 0) damper(c, wheelX - 10, bot, top, 9, css('--ink'));
+    // J-damper branch: spring k2 (bottom) - damper c2 - inerter (top)
+    if (car.branch) {
+      const xs = y[0] - y[1], x1 = y[4], x2 = y[6], xk = xs - x1 - x2, bx = wheelX + 40, col = css(car.color);
+      const Lk = 40 + xk * pxV * 4, Ld = 55 + x2 * pxV, yK = bot - Lk, yD = yK - Ld;   // spring k2 is stiff: its deflection x4 extra
+      coil(c, bx, bot, yK, 8, 4, col, 2);
+      damper(c, bx, yK, yD, 7, col);
+      inerterSym(c, bx, yD, top, col);
+      c.fillStyle = col; c.font = '600 11px ' + css('--f-mono'); c.fillText('J-damper branch', bx + 18, (top + bot) / 2);
+      c.fillStyle = css('--muted'); c.fillText('k₂ · c₂ · inerter', bx + 18, (top + bot) / 2 + 14);
+    }
+    c.fillStyle = css('--muted'); c.font = '11px ' + css('--f-mono');
+    c.fillText('main spring', wheelX - 120, (top + bot) / 2 + 30);
+    c.fillText(`motion magnified ×${mag}`, W - 170, 18);
+    // tyre load arrow at contact
+    const ft = P.kt * (zr - y[1]), arrow = Math.max(-60, Math.min(60, ft / STATIC * 120));
+    c.strokeStyle = css(car.color); c.lineWidth = 4; c.beginPath(); c.moveTo(wheelX + Rt + 18, contactY); c.lineTo(wheelX + Rt + 18, contactY - arrow); c.stroke();
+    c.fillStyle = css(car.color); c.font = '11px ' + css('--f-mono'); c.fillText('tyre load change', wheelX + Rt + 26, contactY - arrow / 2);
+    $('r-ft').textContent = (ft >= 0 ? '+' : '') + (100 * ft / STATIC).toFixed(1) + ' %';
+    $('r-st').textContent = ((y[0] - y[1]) * 1e3).toFixed(2) + ' mm';
+    $('r-t').textContent = simT.toFixed(2) + ' s';
+    $('car-title').textContent = `Car view: ${car.name}, ${(speed * 3.6).toFixed(0)} km/h`;
+  }
+
+  function drawInerter() {
+    const [c, W, H] = fit($('iner'));
+    c.clearRect(0, 0, W, H);
+    const car = CARS[sel], y = states[sel].y;
+    if (!car.branch) {
+      c.fillStyle = css('--muted'); c.font = '14px ' + css('--f-body');
+      c.fillText('The conventional car has no inerter.', 20, H / 2 - 8);
+      c.fillText('Pick "Ideal J-damper" or "CFD J-damper" above.', 20, H / 2 + 14);
+      ['r-vp', 'r-vo', 'r-fi'].forEach(id => $(id).textContent = '–'); return;
+    }
+    const br = car.branch, v1 = y[5], x1 = y[4];
+    const cx0 = W * 0.12, cx1 = W * 0.88, cy = H * 0.52, rc = Math.min(48, H * 0.2), Rcoil = rc + 22;
+    const vOil = v1 * AREA_RATIO, col = css(car.color);
+    // coil (back half)
+    const turns = 9, pathPts = [];
+    for (let i = 0; i <= 900; i++) { const u = i / 900, th = u * turns * 2 * Math.PI; pathPts.push([cx0 + 20 + (cx1 - cx0 - 40) * u, cy - Rcoil * Math.cos(th), Math.sin(th)]); }
+    const strokeHalf = (front) => {
+      c.beginPath(); let pen = false;
+      for (const [x, yy, z] of pathPts) { if ((z >= 0) === front) { pen ? c.lineTo(x, yy) : c.moveTo(x, yy); pen = true; } else pen = false; }
+      c.strokeStyle = col; c.globalAlpha = front ? 0.9 : 0.25; c.lineWidth = front ? 7 : 5; c.lineCap = 'round'; c.stroke(); c.globalAlpha = 1;
+    };
+    strokeHalf(false);
+    // cylinder + oil + piston
+    c.fillStyle = css('--surface'); c.fillRect(cx0, cy - rc, cx1 - cx0, 2 * rc);
+    c.fillStyle = col; c.globalAlpha = 0.14; c.fillRect(cx0, cy - rc, cx1 - cx0, 2 * rc); c.globalAlpha = 1;
+    c.strokeStyle = css('--steel'); c.lineWidth = 3; c.strokeRect(cx0, cy - rc, cx1 - cx0, 2 * rc);
+    const travel = (cx1 - cx0) * 0.3, px = (cx0 + cx1) / 2 + Math.max(-1, Math.min(1, x1 / 0.004)) * travel;   // ±4 mm -> full travel
+    c.fillStyle = css('--steel'); c.fillRect(px - 8, cy - rc + 3, 16, 2 * rc - 6);
+    c.fillRect(0, cy - 6, px - 8, 12);
+    strokeHalf(true);
+    // oil particles travelling along the coil
+    for (const u of particles) {
+      const uu = ((u + oilPhase) % 1 + 1) % 1, i = Math.floor(uu * 900), [x, yy, z] = pathPts[i];
+      if (z < 0) continue;
+      c.fillStyle = css('--surface'); c.beginPath(); c.arc(x, yy, 2.6, 0, 2 * Math.PI); c.fill();
+    }
+    // flow direction arrow
+    c.fillStyle = css('--ink'); c.font = '600 12px ' + css('--f-mono');
+    c.fillText(vOil >= 0 ? 'oil flow  ⟶' : '⟵  oil flow', W / 2 - 50, cy + Rcoil + 26);
+    c.fillStyle = css('--muted'); c.font = '11px ' + css('--f-mono');
+    c.fillText('piston (40 mm bore)', cx0 + 4, cy - rc - Rcoil + rc - 6 < 14 ? 14 : 14);
+    c.fillText(`helical channel: 6 mm, ${br.b.toFixed(0)} kg nominal inertance`, cx0 + 4, H - 8);
+    const Fi = br.bEff * ((states[sel].lastFb - br.cPar * v1) / br.bEff) + br.cPar * v1;   // = branch force
+    $('r-vp').textContent = (v1 * 1000).toFixed(0) + ' mm/s';
+    $('r-vo').textContent = Math.abs(vOil).toFixed(2) + ' m/s';
+    $('r-fi').textContent = ((states[sel].lastFb || 0) / 1000).toFixed(2) + ' kN';
+  }
+
+  function drawTrace() {
+    const [c, W, H] = fit($('trace'));
+    c.clearRect(0, 0, W, H);
+    const m = { l: 44, r: 8, t: 8, b: 20 }, span = 1.5, ymax = 40;
+    c.strokeStyle = css('--grid'); c.lineWidth = 1; c.fillStyle = css('--muted'); c.font = '10px ' + css('--f-mono');
+    for (const v of [-40, -20, 0, 20, 40]) { const yy = m.t + (ymax - v) / (2 * ymax) * (H - m.t - m.b); c.beginPath(); c.moveTo(m.l, yy); c.lineTo(W - m.r, yy); c.stroke(); c.fillText((v > 0 ? '+' : '') + v + '%', 4, yy + 3); }
+    c.fillText('time →', W - 50, H - 4);
+    states.forEach((st, k) => {
+      const h = st.hist; if (h.length < 2) return;
+      c.strokeStyle = css(CARS[k].color); c.lineWidth = k === sel ? 2.2 : 1.2; c.globalAlpha = k === sel ? 1 : 0.7; c.beginPath();
+      h.forEach(([t, v], i) => { const xx = m.l + (t - (simT - span)) / span * (W - m.l - m.r), yy = m.t + (ymax - Math.max(-ymax, Math.min(ymax, v))) / (2 * ymax) * (H - m.t - m.b); i ? c.lineTo(xx, yy) : c.moveTo(xx, yy); });
+      c.stroke(); c.globalAlpha = 1;
+    });
+    const rms = states.map(st => st.n ? Math.sqrt(st.sum2 / st.n) : 0), worst = Math.max(...rms, 1e-9);
+    $('grip').innerHTML = states.map((st, k) => {
+      const gain = rms[0] ? 100 * (rms[0] - rms[k]) / rms[0] : 0;
+      return `<div class="gbar"><span>${CARS[k].name}</span><span class="tr"><span class="fl" style="width:${100 * rms[k] / worst}%;background:var(${CARS[k].color})"></span></span><span class="val">${rms[k].toFixed(2)} %</span></div>` +
+        (k ? `<div style="font:500 .78rem var(--f-mono);color:var(${CARS[k].color});margin:-4px 0 2px 11.5em">${gain >= 0 ? gain.toFixed(1) + ' % less fluctuation than conventional' : (-gain).toFixed(1) + ' % more'}</div>` : '');
+    }).join('');
+  }
+
+  // ---------------- main loop ----------------
+  let last = performance.now(), histTick = 0;
+  function frame(now) {
+    const realDt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (running) {
+      const simDt = realDt * slow, nSteps = Math.max(1, Math.round(simDt / DT));
+      for (let s = 0; s < nSteps; s++) {
+        const z0 = road(dist), d1 = dist + speed * DT, z1 = road(d1);
+        CARS.forEach((car, k) => {
+          const st = states[k]; step(car, st, DT, z0, z1);
+          if (car.branch) st.lastFb = car.branch.k2 * ((st.y[0] - st.y[1]) - st.y[4] - st.y[6]);
+          const ft = 100 * P.kt * (z1 - st.y[1]) / STATIC;
+          if (simT > 0.5) { st.sum2 += ft * ft; st.n++; }
+          if (histTick % 10 === 0) { st.hist.push([simT + DT, ft]); while (st.hist.length && st.hist[0][0] < simT - 1.5) st.hist.shift(); }
+        });
+        dist = d1; simT += DT; histTick++;
+        const v1 = CARS[sel].branch ? states[sel].y[5] : 0;
+        oilPhase += v1 * AREA_RATIO * DT / 1.9;     // channel length 1.9 m -> fraction of the coil per step
+      }
+    }
+    drawCar(); drawInerter(); drawTrace();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>

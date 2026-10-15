@@ -1,0 +1,28 @@
+##### torus_steady  (12:05)
+re00500: finished (SIMPLE solution converged in 1022 iterations)
+re01000: finished (SIMPLE solution converged in 1056 iterations)
+re00100: finished (SIMPLE solution converged in 1278 iterations)
+re00250: finished (SIMPLE solution converged in 1170 iterations)
+re02000: finished (SIMPLE solution converged in 2545 iterations)
+re04000: finished ()
+Done.
+##### torus_steady finished (12:07)
+##### torus_osc  (12:07)
+environment: line 1:  7977 Floating point exception(core dumped) $app > log.$app 2>&1
+T01: FAILED, see T01/log.pimpleFoam
+environment: line 1:  7978 Floating point exception(core dumped) $app > log.$app 2>&1
+T02: FAILED, see T02/log.pimpleFoam
+environment: line 1:  7979 Floating point exception(core dumped) $app > log.$app 2>&1
+T03: FAILED, see T03/log.pimpleFoam
+environment: line 1:  8063 Floating point exception(core dumped) $app > log.$app 2>&1
+T06: FAILED, see T06/log.pimpleFoam
+environment: line 1:  8103 Floating point exception(core dumped) $app > log.$app 2>&1
+T07: FAILED, see T07/log.pimpleFoam
+T04: finished ()
+T09: finished ()
+T08: finished ()
+T05: finished ()
+T10: finished ()
+Done.
+##### torus_osc finished (12:12)
+ALL SETS DONE

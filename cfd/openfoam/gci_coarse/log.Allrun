@@ -1,0 +1,19 @@
+=== re00100 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re01000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re04000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+Done. Post-process with:  python ../../scripts/post_s01.py

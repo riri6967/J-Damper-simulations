@@ -1,0 +1,25 @@
+#!/bin/bash
+# 3D port set: snappyHexMesh once, then run every case in parallel (NP cores), one after another.
+#   ./Allrun [NP]      (default 8)
+cd "${0%/*}" || exit 1
+NP=${1:-8}
+command -v simpleFoam >/dev/null || { echo "OpenFOAM environment not loaded"; exit 1; }
+sed -i "s/numberOfSubdomains .*/numberOfSubdomains $NP;/" mesh/system/decomposeParDict
+for c in in_* out_*; do cp mesh/system/decomposeParDict "$c/system/"; done
+if [ ! -f mesh/constant/polyMesh/owner ]; then
+  ( cd mesh && blockMesh > log.blockMesh 2>&1 && surfaceFeatureExtract > log.surfaceFeatureExtract 2>&1 \
+      && decomposePar -force > log.decomposePar 2>&1 \
+      && mpirun -np $NP snappyHexMesh -overwrite -parallel > log.snappyHexMesh 2>&1 \
+      && reconstructParMesh -constant > log.reconstructParMesh 2>&1 && rm -rf processor* \
+      && checkMesh > log.checkMesh 2>&1 ) || { echo "meshing failed, see mesh/log.*"; exit 1; }
+fi
+grep -E "^ *cells:|Mesh OK|Failed|\*\*\*|Max skewness" mesh/log.checkMesh
+for c in out_* in_*; do
+    rm -rf "$c/constant/polyMesh" "$c/postProcessing" "$c"/processor* "$c"/[1-9]*
+    cp -r mesh/constant/polyMesh "$c/constant/"
+    ( cd "$c" && decomposePar -force > log.decomposePar 2>&1 \
+        && mpirun -np $NP simpleFoam -parallel > log.simpleFoam 2>&1 \
+        && reconstructPar -latestTime > log.reconstructPar 2>&1 && rm -rf processor* )
+    if grep -q "^End" "$c/log.simpleFoam"; then echo "$c: finished $(date +%H:%M)"; else echo "$c: FAILED, see $c/log.simpleFoam"; fi
+done
+echo "Done."

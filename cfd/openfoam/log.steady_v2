@@ -1,0 +1,82 @@
+##### s01  (11:28)
+=== re00100 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re00250 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re00500 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re01000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re02000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re04000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+Done. Post-process with:  python ../../scripts/post_s01.py
+##### s01 finished (12:15)
+##### gci_coarse  (12:15)
+=== re00100 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re01000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re04000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+Done. Post-process with:  python ../../scripts/post_s01.py
+##### gci_coarse finished (12:29)
+##### gci_fine  (12:29)
+=== re00100 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re01000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+=== re04000 ===
+  checkMesh: Mesh OK
+numberOfSubdomains 8;
+  End
+  
+  Finalising parallel run
+Done. Post-process with:  python ../../scripts/post_s01.py
+##### gci_fine finished (13:12)
+ALL SETS DONE

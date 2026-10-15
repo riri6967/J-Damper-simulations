@@ -1,0 +1,30 @@
+#!/bin/bash
+# Run every S01 case:  ./Allrun [nProcs]      (default 4; use 1 for serial)
+# Needs the OpenFOAM v2406 environment, e.g.:  source /usr/lib/openfoam/openfoam2406/etc/bashrc
+cd "${0%/*}" || exit 1
+NP=${1:-4}
+command -v simpleFoam >/dev/null || { echo "OpenFOAM environment not loaded (simpleFoam not found)"; exit 1; }
+
+for c in re*/; do
+    c=${c%/}
+    echo "=== $c ==="
+    rm -rf "$c/constant/polyMesh" "$c"/processor* "$c/postProcessing"
+    cp -r mesh/constant/polyMesh "$c/constant/"
+    (
+        cd "$c" || exit 1
+        checkMesh > log.checkMesh 2>&1 || { echo "  checkMesh FAILED, see $c/log.checkMesh"; exit 1; }
+        grep -q "Mesh OK" log.checkMesh && echo "  checkMesh: Mesh OK" || echo "  checkMesh: warnings, see log.checkMesh"
+        if [ "$NP" -gt 1 ]; then
+            foamDictionary -entry numberOfSubdomains -set "$NP" system/decomposeParDict > /dev/null
+            decomposePar -force > log.decomposePar 2>&1
+            mpirun -np "$NP" potentialFoam -initialiseUBCs -parallel > log.potentialFoam 2>&1
+            mpirun -np "$NP" simpleFoam -parallel > log.simpleFoam 2>&1
+            reconstructPar -latestTime > log.reconstructPar 2>&1
+        else
+            potentialFoam -initialiseUBCs > log.potentialFoam 2>&1
+            simpleFoam > log.simpleFoam 2>&1
+        fi
+        tail -n 3 log.simpleFoam | sed 's/^/  /'
+    )
+done
+echo "Done. Post-process with:  python ../../scripts/post_s01.py"
