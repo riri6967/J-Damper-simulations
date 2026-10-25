@@ -31,7 +31,7 @@ const THEME = {
 
 const TEAM = [
   { name: "Rishi Gerolaga Kumar", reg: "URK24RA3001" },
-  { name: "C Y Nicholas", reg: "URKRA3012" },
+  { name: "C Y Nicholas", reg: "URK24RA3012" },
 ];
 const COURSE = "Pneumatics and Dynamics (23ME2002)";
 const INSTITUTE = "Karunya Institute of Technology and Sciences";

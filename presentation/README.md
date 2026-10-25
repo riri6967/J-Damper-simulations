@@ -3,7 +3,7 @@
 **`J-Damper_CFD_Presentation.pptx`** is a 21-slide deck for the faculty review of this project.
 
 - Course: Pneumatics and Dynamics (23ME2002), Karunya Institute of Technology and Sciences
-- Presented by: Rishi Gerolaga Kumar (URK24RA3001) and C Y Nicholas (URKRA3012)
+- Presented by: Rishi Gerolaga Kumar (URK24RA3001) and C Y Nicholas (URK24RA3012)
 
 Every slide has speaker notes (what to say, with the key numbers). Open them in PowerPoint with
 View → Notes, or use Presenter View. Slides 4 and 15 contain animated GIFs (the CFD flow and the
